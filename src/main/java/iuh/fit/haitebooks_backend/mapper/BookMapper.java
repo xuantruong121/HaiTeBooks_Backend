@@ -13,8 +13,8 @@ public class BookMapper {
                 book.getPrice(),
                 book.getStock(),
                 book.getDescription(),
-                book.getBarcode(),
                 book.getImageUrl(),
+                book.getBarcode(),
                 book.getCategory() != null ? book.getCategory().getName() : null
         );
     }
