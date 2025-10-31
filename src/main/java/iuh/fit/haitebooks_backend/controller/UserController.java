@@ -27,8 +27,15 @@ public class UserController {
     public ResponseEntity<List<UserResponse>> getAllUsers() {
         List<UserResponse> responses = userRepository.findAll()
                 .stream()
-                .map(u -> new UserResponse(u.getId(), u.getUsername(), u.getEmail(), u.getFullName(),
-                        u.getPhone()))
+                .map(u -> new UserResponse(
+                        u.getId(),
+                        u.getUsername(),
+                        u.getEmail(),
+                        u.getFullName(),
+                        u.getPhone(),
+                        u.getAddress(),
+                        u.getRole() != null ? u.getRole().getName() : null
+                ))
                 .toList();
         return ResponseEntity.ok(responses);
     }
@@ -36,8 +43,15 @@ public class UserController {
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUser(@PathVariable Long id) {
         return userRepository.findById(id)
-                .map(u -> ResponseEntity.ok(new UserResponse(u.getId(), u.getUsername(), u.getEmail(),
-                        u.getFullName(), u.getPhone())))
+                .map(u -> ResponseEntity.ok(new UserResponse(
+                        u.getId(),
+                        u.getUsername(),
+                        u.getEmail(),
+                        u.getFullName(),
+                        u.getPhone(),
+                        u.getAddress(),
+                        u.getRole() != null ? u.getRole().getName() : null
+                )))
                 .orElse(ResponseEntity.notFound().build());
     }
 
@@ -58,7 +72,13 @@ public class UserController {
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         UserResponse response = new UserResponse(
-                user.getId(), user.getUsername(), user.getEmail(), user.getFullName(), user.getPhone()
+                user.getId(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getFullName(),
+                user.getPhone(),
+                user.getAddress(),
+                user.getRole() != null ? user.getRole().getName() : null
         );
 
         return ResponseEntity.ok(response);
@@ -78,8 +98,15 @@ public class UserController {
         userRepository.save(user);
 
         return ResponseEntity.ok(
-                new UserResponse(user.getId(), user.getUsername(), user.getEmail(), user.getFullName(), user.getPhone())
+                new UserResponse(
+                        user.getId(),
+                        user.getUsername(),
+                        user.getEmail(),
+                        user.getFullName(),
+                        user.getPhone(),
+                        user.getAddress(),
+                        user.getRole() != null ? user.getRole().getName() : null
+                )
         );
     }
-
 }
