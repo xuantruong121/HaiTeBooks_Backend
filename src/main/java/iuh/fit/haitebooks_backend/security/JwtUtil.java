@@ -43,8 +43,13 @@ public class JwtUtil {
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
+            System.out.println("Token hợp lệ!");
             return true;
+        } catch (ExpiredJwtException e) {
+            System.out.println("Token hết hạn!");
+            return false;
         } catch (JwtException | IllegalArgumentException ex) {
+            System.out.println("Token không hợp lệ: " + ex.getMessage());
             return false;
         }
     }
