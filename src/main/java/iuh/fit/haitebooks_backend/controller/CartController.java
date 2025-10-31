@@ -3,7 +3,6 @@ package iuh.fit.haitebooks_backend.controller;
 import iuh.fit.haitebooks_backend.dtos.request.CartRequest;
 import iuh.fit.haitebooks_backend.dtos.response.CartResponse;
 import iuh.fit.haitebooks_backend.model.Cart;
-import iuh.fit.haitebooks_backend.repository.CartRepository;
 import iuh.fit.haitebooks_backend.service.CartService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -11,16 +10,14 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/carts")
+@RequestMapping("/api/cart") // sửa từ carts -> cart để đồng bộ với SecurityConfig
 @CrossOrigin(origins = "*")
 public class CartController {
 
     private final CartService cartService;
-    private final CartRepository cartRepository;
 
-    public CartController(CartService cartService, CartRepository cartRepository) {
+    public CartController(CartService cartService) {
         this.cartService = cartService;
-        this.cartRepository = cartRepository;
     }
 
     @GetMapping("/user/{userId}")
@@ -32,17 +29,24 @@ public class CartController {
         return ResponseEntity.ok(responses);
     }
 
-    @PostMapping
-    public ResponseEntity<Cart> addToCart(@RequestBody Cart cart) {
-        return ResponseEntity.ok(cartService.addToCart(cart));
+    @PostMapping("/add")
+    public ResponseEntity<CartResponse> addToCart(@RequestBody CartRequest request) {
+        Cart cart = cartService.addToCart(request);
+        CartResponse response = new CartResponse(
+                cart.getId(),
+                cart.getUser().getId(),
+                cart.getBook().getId(),
+                cart.getQuantity()
+        );
+        return ResponseEntity.ok(response);
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/update/{id}")
     public ResponseEntity<Cart> updateQuantity(@PathVariable Long id, @RequestBody CartRequest req) {
         return ResponseEntity.ok(cartService.updateQuantity(id, req.getQuantity()));
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/remove/{id}")
     public ResponseEntity<Void> removeFromCart(@PathVariable Long id) {
         cartService.removeFromCart(id);
         return ResponseEntity.noContent().build();

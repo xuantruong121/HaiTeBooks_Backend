@@ -182,4 +182,3 @@ CREATE TABLE book_embeddings (
      FOREIGN KEY (book_id) REFERENCES books(id)
 );
 
-

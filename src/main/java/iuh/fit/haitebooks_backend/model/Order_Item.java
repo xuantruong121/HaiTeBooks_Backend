@@ -3,7 +3,7 @@ package iuh.fit.haitebooks_backend.model;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "order_item")
+@Table(name = "order_items")
 public class Order_Item {
     @Id
     @GeneratedValue(strategy = jakarta.persistence.GenerationType.IDENTITY)
