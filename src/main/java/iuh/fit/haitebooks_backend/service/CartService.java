@@ -10,6 +10,7 @@ import iuh.fit.haitebooks_backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class CartService {
@@ -30,16 +31,24 @@ public class CartService {
         return cartRepository.findByUserId(userId);
     }
 
-    public Cart addToCart(CartRequest request) {
-        User user = userRepository.findById(request.getUserId())
+    public Cart addToCart(CartRequest request, String username) {
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Book book = bookRepository.findById(request.getBookId())
                 .orElseThrow(() -> new RuntimeException("Book not found"));
 
-        Cart cart = new Cart();
-        cart.setUser(user);
-        cart.setBook(book);
-        cart.setQuantity(request.getQuantity());
+        Optional<Cart> existingCart = cartRepository.findByUserAndBook(user, book);
+
+        Cart cart;
+        if (existingCart.isPresent()) {
+            cart = existingCart.get();
+            cart.setQuantity(cart.getQuantity() + request.getQuantity());
+        } else {
+            cart = new Cart();
+            cart.setUser(user);
+            cart.setBook(book);
+            cart.setQuantity(request.getQuantity());
+        }
 
         return cartRepository.save(cart);
     }

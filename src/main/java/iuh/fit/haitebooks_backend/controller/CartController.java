@@ -5,6 +5,7 @@ import iuh.fit.haitebooks_backend.dtos.response.CartResponse;
 import iuh.fit.haitebooks_backend.model.Cart;
 import iuh.fit.haitebooks_backend.service.CartService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -32,7 +33,8 @@ public class CartController {
 
     @PostMapping("/add")
     public ResponseEntity<CartResponse> addToCart(@RequestBody CartRequest request) {
-        Cart cart = cartService.addToCart(request);
+        String username = SecurityContextHolder.getContext().getAuthentication().getName();
+        Cart cart = cartService.addToCart(request,username);
         CartResponse response = new CartResponse(
                 cart.getId(),
                 cart.getUser().getId(),

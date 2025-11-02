@@ -33,4 +33,4 @@ build/
 .vscode/
 
 # Ignore environment variables
-.env
+src/main/resources/.env
