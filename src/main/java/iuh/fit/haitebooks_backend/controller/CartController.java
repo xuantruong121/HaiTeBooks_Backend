@@ -24,7 +24,8 @@ public class CartController {
     public ResponseEntity<List<CartResponse>> getCartByUser(@PathVariable Long userId) {
         List<CartResponse> responses = cartService.getCartByUser(userId)
                 .stream()
-                .map(c -> new CartResponse(c.getId(), c.getUser().getId(), c.getBook().getId(), c.getQuantity()))
+                .map(c -> new CartResponse(c.getId(), c.getUser().getId(), c.getBook().getId(),
+                        c.getQuantity()))
                 .toList();
         return ResponseEntity.ok(responses);
     }

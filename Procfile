@@ -1,0 +1,1 @@
+web: java -jar target/haitebooks_backend-0.0.1-SNAPSHOT.jar
