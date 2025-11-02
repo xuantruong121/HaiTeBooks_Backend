@@ -27,7 +27,7 @@ public class BookEmbedding {
     private Book book;
 
     @Lob
-    @Column(name = "embedding_json", columnDefinition = "TEXT")
+    @Column(name = "embedding_json", columnDefinition = "MEDIUMTEXT")
     private String embeddingJson;
 
     @Column(name = "created_at", nullable = false)

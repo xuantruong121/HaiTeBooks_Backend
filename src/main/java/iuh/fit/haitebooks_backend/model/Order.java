@@ -23,11 +23,12 @@ public class Order {
     private User user;
 
     @Column(nullable = false, name = "order_date")
-    private LocalDateTime orderDate;
+    private LocalDateTime orderDate = LocalDateTime.now();
 
     @Column(nullable = false)
     private double total;
 
+    // PENDING, PROCESSING,  COMPLETED,  CANCELLED
     @Enumerated(EnumType.STRING)
     private Status_Order status;
 

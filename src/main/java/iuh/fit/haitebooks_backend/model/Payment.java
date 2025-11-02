@@ -24,6 +24,7 @@ public class Payment {
     @JoinColumn(name = "order_id")
     private Order order;
 
+    // CASH, CREDIT_CARD, MOMO, ZALO_PAY
     @Enumerated(EnumType.STRING)
     private Method method;
 
@@ -33,6 +34,7 @@ public class Payment {
     @Column(nullable = false, name = "payment_date")
     private LocalDateTime paymentDate;
 
+    //  PENDING, SUCCESS, FAILED
     @Enumerated(EnumType.STRING)
     private Status_Payment status;
 }

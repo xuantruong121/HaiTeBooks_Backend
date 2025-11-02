@@ -57,7 +57,7 @@ public class Book {
     private List<Review> reviews;
 
     // Mapping to BookEmbedding
-    @OneToOne(mappedBy = "book", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "book", cascade = CascadeType.ALL)
     @JsonIgnore
     private BookEmbedding bookEmbedding;
 }
