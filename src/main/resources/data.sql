@@ -76,15 +76,15 @@ FOREIGN KEY (category_id) REFERENCES book_categories(id)
 
 INSERT INTO books (title, author, barcode, price, stock, description, image_url, category_id) VALUES
 ('Clean Code', 'Robert C. Martin', '9780132350884', 350000, 20,
- 'A handbook of agile software craftsmanship.', 'https://example.com/cleancode.jpg', 1),
+ 'A handbook of agile software craftsmanship.', 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848267/cleancode_kwld08.png', 1),
 ('The Pragmatic Programmer', 'Andrew Hunt', '9780201616224', 420000, 15,
- 'Journey to mastery in software development.', 'https://example.com/pragmatic.jpg', 1),
+ 'Journey to mastery in software development.', 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848267/pragmatic_nmcybl.png', 1),
 ('Design Patterns', 'Erich Gamma', '9780201633610', 480000, 10,
- 'Elements of reusable object-oriented software.', 'https://example.com/designpatterns.jpg', 1),
+ 'Elements of reusable object-oriented software.', 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/designpatterns_bjpzpe.jpg', 1),
 ('Rich Dad Poor Dad', 'Robert Kiyosaki', '9780446677455', 250000, 30,
- 'What the rich teach their kids about money.', 'https://example.com/richdad.jpg', 2),
+ 'What the rich teach their kids about money.', 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/richdad_fnvbwv.png', 2),
 ('Harry Potter and the Sorcerer''s Stone', 'J.K. Rowling', '9780747532699', 320000, 50,
- 'Fantasy novel for all ages.', 'https://example.com/harrypotter.jpg', 3);
+ 'Fantasy novel for all ages.', 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/harrypotter_kwpopd.webp', 3);
 
 -- ========================
 -- 5️⃣ CART ITEMS
