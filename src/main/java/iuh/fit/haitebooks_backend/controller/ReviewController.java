@@ -1,12 +1,16 @@
 package iuh.fit.haitebooks_backend.controller;
 
+import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
+import iuh.fit.haitebooks_backend.dtos.response.CategoryResponse;
 import iuh.fit.haitebooks_backend.dtos.response.ReviewResponse;
+import iuh.fit.haitebooks_backend.mapper.BookMapper;
 import iuh.fit.haitebooks_backend.model.Review;
 import iuh.fit.haitebooks_backend.repository.ReviewRepository;
 import iuh.fit.haitebooks_backend.service.ReviewService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @RestController
@@ -25,6 +29,16 @@ public class ReviewController {
     @PostMapping
     public ResponseEntity<Review> createReview(@RequestBody Review review) {
         return ResponseEntity.ok(reviewService.save(review));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ReviewResponse>> getAllReviews() {
+        List<ReviewResponse> responses = reviewRepository.findAll()
+                .stream()
+                .map(reviewService::toResponse)
+                .toList();
+
+        return ResponseEntity.ok(responses);
     }
 
     @GetMapping("/book/{bookId}")

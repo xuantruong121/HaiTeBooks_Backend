@@ -1,5 +1,8 @@
 package iuh.fit.haitebooks_backend.service;
 
+import iuh.fit.haitebooks_backend.dtos.response.CategoryResponse;
+import iuh.fit.haitebooks_backend.dtos.response.ReviewResponse;
+import iuh.fit.haitebooks_backend.model.BookCategory;
 import iuh.fit.haitebooks_backend.model.Review;
 import iuh.fit.haitebooks_backend.repository.ReviewRepository;
 import org.springframework.stereotype.Service;
@@ -24,5 +27,10 @@ public class ReviewService {
 
     public List<Review> findByUser(Long userId) {
         return reviewRepository.findByUserId(userId);
+    }
+
+    public ReviewResponse toResponse(Review review) {
+        return new ReviewResponse(review.getId(), review.getUser().getId(), review.getBook().getId(),
+                review.getRating(), review.getComment(), review.getCreated_at());
     }
 }
