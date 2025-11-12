@@ -1,10 +1,13 @@
 package iuh.fit.haitebooks_backend.controller;
 
 import iuh.fit.haitebooks_backend.dtos.request.OrderRequest;
+import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
 import iuh.fit.haitebooks_backend.dtos.response.OrderResponse;
+import iuh.fit.haitebooks_backend.mapper.BookMapper;
+import iuh.fit.haitebooks_backend.mapper.OrderMapper;
 import iuh.fit.haitebooks_backend.model.Order;
-import iuh.fit.haitebooks_backend.repository.OrderRepository;
 import iuh.fit.haitebooks_backend.service.OrderService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,40 +19,50 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
-    private final OrderRepository orderRepository;
-
-    public OrderController(OrderService orderService, OrderRepository orderRepository) {
+    public OrderController(OrderService orderService) {
         this.orderService = orderService;
-        this.orderRepository = orderRepository;
     }
 
+    // ✅ Lấy tất cả orders
+    @GetMapping
+    public ResponseEntity<List<OrderResponse>> getAllOrders() {
+        List<OrderResponse> responses = orderService.getAllOrders()
+                .stream().map(OrderMapper::toOrderResponse).toList();
+        return ResponseEntity.ok(responses);
+    }
+
+    // ✅ Tạo đơn hàng
     @PostMapping
-    public ResponseEntity<Order> createOrder(@RequestBody Order order) {
-        return ResponseEntity.ok(orderService.createOrder(order));
+    public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody OrderRequest request) {
+        Order order = orderService.createOrder(request);
+        return ResponseEntity.ok(OrderMapper.toOrderResponse(order));
     }
 
+    // ✅ Lấy đơn hàng theo user
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<OrderResponse>> getOrdersByUser(@PathVariable Long userId) {
         List<OrderResponse> responses = orderService.findByUser(userId)
                 .stream()
-                .map(o -> new OrderResponse(o.getId(), o.getUser().getId(), o.getTotal(), o.getStatus().name(),
-                        o.getOrderDate()))
+                .map(OrderMapper::toOrderResponse)
                 .toList();
         return ResponseEntity.ok(responses);
     }
 
+    // ✅ Lấy đơn hàng theo ID
     @GetMapping("/{id}")
-    public ResponseEntity<Order> getOrder(@PathVariable Long id) {
-        return orderRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<OrderResponse> getOrder(@PathVariable Long id) {
+        Order order = orderService.getOrderById(id);
+        return ResponseEntity.ok(OrderMapper.toOrderResponse(order));
     }
 
+    // ✅ Cập nhật trạng thái đơn hàng
     @PutMapping("/{id}")
-    public ResponseEntity<Order> updateOrder(@PathVariable Long id, @RequestBody Order details) {
-        return ResponseEntity.ok(orderService.updateOrder(id, details));
+    public ResponseEntity<OrderResponse> updateOrder(@PathVariable Long id, @RequestBody Order details) {
+        Order updated = orderService.updateOrder(id, details);
+        return ResponseEntity.ok(OrderMapper.toOrderResponse(updated));
     }
 
+    // ✅ Xóa đơn hàng
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOrder(@PathVariable Long id) {
         orderService.deleteOrder(id);

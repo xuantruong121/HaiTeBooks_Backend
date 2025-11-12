@@ -1,11 +1,12 @@
 package iuh.fit.haitebooks_backend.controller;
 
+import iuh.fit.haitebooks_backend.dtos.request.BookRequest;
 import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
 import iuh.fit.haitebooks_backend.mapper.BookMapper;
 import iuh.fit.haitebooks_backend.model.Book;
-import iuh.fit.haitebooks_backend.repository.BookRepository;
 import iuh.fit.haitebooks_backend.service.BookService;
-import org.springframework.beans.factory.annotation.Autowired;
+import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -13,63 +14,72 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/books")
-@CrossOrigin(origins = "*") // Cho phép frontend React Native truy cập
+@CrossOrigin(origins = "*")
 public class BookController {
-
-    @Autowired
-    private final BookRepository bookRepository;
 
     private final BookService bookService;
 
-    public BookController(BookRepository bookRepository, BookService bookService) {
+    public BookController(BookService bookService) {
         this.bookService = bookService;
-        this.bookRepository = bookRepository;
     }
 
+    // ✅ Lấy tất cả (không phân trang)
     @GetMapping
     public ResponseEntity<List<BookResponse>> getAllBooks() {
-        List<BookResponse> responses = bookRepository.findAll()
-                .stream()
-                .map(BookMapper::toBookResponse)
-                .toList();
-
+        List<BookResponse> responses = bookService.getAllBooks()
+                .stream().map(BookMapper::toBookResponse).toList();
         return ResponseEntity.ok(responses);
     }
 
-    // ✅ API quét mã sách
+    // ✅ Phân trang + filter
+    @GetMapping("/page")
+    public ResponseEntity<Page<BookResponse>> getBooksWithPagination(
+            @RequestParam(required = false) String keyword,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        var booksPage = bookService.getBooksWithPagination(keyword, page, size)
+                .map(BookMapper::toBookResponse);
+        return ResponseEntity.ok(booksPage);
+    }
+
+    // ✅ Quét barcode
     @GetMapping("/barcode/{code}")
-    public ResponseEntity<Book> getBookByBarcode(@PathVariable String code) {
+    public ResponseEntity<BookResponse> getBookByBarcode(@PathVariable String code) {
         Book book = bookService.findByBarcode(code);
-
-        if (book != null) {
-            return ResponseEntity.ok(book);
-        } else {
-            // Nếu không có trong DB, có thể gọi API ngoài để lấy
-            return ResponseEntity.notFound().build();
-        }
+        return (book != null)
+                ? ResponseEntity.ok(BookMapper.toBookResponse(book))
+                : ResponseEntity.notFound().build();
     }
 
+    // ✅ Tạo mới
     @PostMapping
-    public Book createBook(@RequestBody Book book) {
-        return bookRepository.save(book);
+    public ResponseEntity<BookResponse> createBook(@Valid @RequestBody BookRequest request) {
+        Book created = bookService.createBook(request);
+        return ResponseEntity.ok(BookMapper.toBookResponse(created));
     }
 
+    // ✅ Lấy theo ID
     @GetMapping("/{id}")
-    public Book getBookById(@PathVariable Long id) {
-        return bookRepository.findById(id).orElse(null);
+    public ResponseEntity<BookResponse> getBookById(@PathVariable Long id) {
+        Book book = bookService.getBookById(id);
+        return ResponseEntity.ok(BookMapper.toBookResponse(book));
     }
 
+    // ✅ Cập nhật
     @PutMapping("/{id}")
-    public Book updateBook(@PathVariable Long id, @RequestBody Book bookDetails) {
-        Book book = bookRepository.findById(id).orElseThrow();
-        book.setTitle(bookDetails.getTitle());
-        book.setAuthor(bookDetails.getAuthor());
-        book.setPrice(bookDetails.getPrice());
-        return bookRepository.save(book);
+    public ResponseEntity<BookResponse> updateBook(
+            @PathVariable Long id,
+            @Valid @RequestBody BookRequest request
+    ) {
+        Book updated = bookService.updateBook(id, request);
+        return ResponseEntity.ok(BookMapper.toBookResponse(updated));
     }
 
+    // ✅ Xóa
     @DeleteMapping("/{id}")
-    public void deleteBook(@PathVariable Long id) {
-        bookRepository.deleteById(id);
+    public ResponseEntity<Void> deleteBook(@PathVariable Long id) {
+        bookService.deleteBook(id);
+        return ResponseEntity.noContent().build();
     }
 }

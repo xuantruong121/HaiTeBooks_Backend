@@ -1,9 +1,14 @@
 package iuh.fit.haitebooks_backend.service;
 
+import iuh.fit.haitebooks_backend.dtos.request.CategoryRequest;
 import iuh.fit.haitebooks_backend.dtos.response.CategoryResponse;
+import iuh.fit.haitebooks_backend.mapper.CategoryMapper;
 import iuh.fit.haitebooks_backend.model.BookCategory;
 import iuh.fit.haitebooks_backend.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class CategoryService {
@@ -14,14 +19,49 @@ public class CategoryService {
         this.categoryRepository = categoryRepository;
     }
 
-    public CategoryResponse toResponse(BookCategory category) {
-        return new CategoryResponse(category.getId(), category.getName(), category.getDescription());
+    // ✅ Lấy tất cả category
+    public List<CategoryResponse> getAllCategories() {
+        return categoryRepository.findAll()
+                .stream()
+                .map(CategoryMapper::toResponse)
+                .collect(Collectors.toList());
     }
 
-    public BookCategory updateCategory(Long id, BookCategory newCategory) {
-        BookCategory category = categoryRepository.findById(id).orElseThrow();
-        category.setName(newCategory.getName());
-        category.setDescription(newCategory.getDescription());
+    // ✅ Tạo mới — kiểm tra trùng tên
+    public BookCategory createCategory(CategoryRequest request) {
+        if (categoryRepository.existsByNameIgnoreCase(request.getName())) {
+            throw new RuntimeException("Category name already exists: " + request.getName());
+        }
+
+        BookCategory category = CategoryMapper.toEntity(request);
         return categoryRepository.save(category);
+    }
+
+    // ✅ Lấy theo ID
+    public BookCategory getCategoryById(Long id) {
+        return categoryRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Category not found with id " + id));
+    }
+
+    // ✅ Cập nhật — kiểm tra trùng tên (trừ chính nó)
+    public BookCategory updateCategory(Long id, CategoryRequest request) {
+        BookCategory category = getCategoryById(id);
+
+        categoryRepository.findByNameIgnoreCase(request.getName()).ifPresent(existing -> {
+            if (!existing.getId().equals(id)) {
+                throw new RuntimeException("Category name already exists: " + request.getName());
+            }
+        });
+
+        CategoryMapper.updateEntity(category, request);
+        return categoryRepository.save(category);
+    }
+
+    // ✅ Xóa
+    public void deleteCategory(Long id) {
+        if (!categoryRepository.existsById(id)) {
+            throw new RuntimeException("Category not found with id " + id);
+        }
+        categoryRepository.deleteById(id);
     }
 }

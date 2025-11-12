@@ -2,9 +2,10 @@ package iuh.fit.haitebooks_backend.controller;
 
 import iuh.fit.haitebooks_backend.dtos.request.PaymentRequest;
 import iuh.fit.haitebooks_backend.dtos.response.PaymentResponse;
+import iuh.fit.haitebooks_backend.mapper.PaymentMapper;
 import iuh.fit.haitebooks_backend.model.Payment;
-import iuh.fit.haitebooks_backend.repository.PaymentRepository;
 import iuh.fit.haitebooks_backend.service.PaymentService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,24 +17,33 @@ import java.util.List;
 public class PaymentController {
 
     private final PaymentService paymentService;
-    private final PaymentRepository paymentRepository;
-
-    public PaymentController(PaymentService paymentService, PaymentRepository paymentRepository) {
+    public PaymentController(PaymentService paymentService) {
         this.paymentService = paymentService;
-        this.paymentRepository = paymentRepository;
     }
 
+    // ✅ Tạo thanh toán
     @PostMapping
-    public ResponseEntity<Payment> createPayment(@RequestBody Payment payment) {
-        return ResponseEntity.ok(paymentService.makePayment(payment));
+    public ResponseEntity<PaymentResponse> createPayment(@Valid @RequestBody PaymentRequest request) {
+        Payment payment = paymentService.createPayment(request);
+        return ResponseEntity.ok(PaymentMapper.toResponse(payment));
     }
 
+    // ✅ Lấy thanh toán theo order
     @GetMapping("/order/{orderId}")
     public ResponseEntity<List<PaymentResponse>> getPaymentsByOrder(@PathVariable Long orderId) {
         List<PaymentResponse> responses = paymentService.findByOrder(orderId)
                 .stream()
-                .map(p -> new PaymentResponse(p.getId(), p.getOrder().getId(), p.getOrder().getUser().getId(),
-                        p.getAmount(), p.getStatus().name(), p.getPaymentDate()))
+                .map(PaymentMapper::toResponse)
+                .toList();
+        return ResponseEntity.ok(responses);
+    }
+
+    // ✅ Lấy thanh toán theo user
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<PaymentResponse>> getPaymentsByUser(@PathVariable Long userId) {
+        List<PaymentResponse> responses = paymentService.findByUser(userId)
+                .stream()
+                .map(PaymentMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(responses);
     }

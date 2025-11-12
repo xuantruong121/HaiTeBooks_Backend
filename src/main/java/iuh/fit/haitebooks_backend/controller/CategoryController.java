@@ -1,9 +1,11 @@
 package iuh.fit.haitebooks_backend.controller;
 
+import iuh.fit.haitebooks_backend.dtos.request.CategoryRequest;
 import iuh.fit.haitebooks_backend.dtos.response.CategoryResponse;
+import iuh.fit.haitebooks_backend.mapper.CategoryMapper;
 import iuh.fit.haitebooks_backend.model.BookCategory;
-import iuh.fit.haitebooks_backend.repository.CategoryRepository;
 import iuh.fit.haitebooks_backend.service.CategoryService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -14,43 +16,47 @@ import java.util.List;
 @CrossOrigin(origins = "*")
 public class CategoryController {
 
-    private final CategoryRepository categoryRepository;
     private final CategoryService categoryService;
 
-    public CategoryController(CategoryRepository categoryRepository, CategoryService categoryService) {
-        this.categoryRepository = categoryRepository;
+    public CategoryController(CategoryService categoryService) {
         this.categoryService = categoryService;
     }
 
+    // ✅ Lấy tất cả category
     @GetMapping
     public ResponseEntity<List<CategoryResponse>> getAllCategories() {
-        List<CategoryResponse> responses = categoryRepository.findAll()
-                .stream()
-                .map(categoryService::toResponse)
-                .toList();
+        List<CategoryResponse> responses = categoryService.getAllCategories();
         return ResponseEntity.ok(responses);
     }
 
+    // ✅ Tạo mới
     @PostMapping
-    public ResponseEntity<BookCategory> createCategory(@RequestBody BookCategory category) {
-        return ResponseEntity.ok(categoryRepository.save(category));
+    public ResponseEntity<CategoryResponse> createCategory(@Valid @RequestBody CategoryRequest request) {
+        BookCategory category = categoryService.createCategory(request);
+        return ResponseEntity.ok(CategoryMapper.toResponse(category));
     }
 
+    // ✅ Lấy theo ID
     @GetMapping("/{id}")
-    public ResponseEntity<BookCategory> getCategory(@PathVariable Long id) {
-        return categoryRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    public ResponseEntity<CategoryResponse> getCategory(@PathVariable Long id) {
+        BookCategory category = categoryService.getCategoryById(id);
+        return ResponseEntity.ok(CategoryMapper.toResponse(category));
     }
 
+    // ✅ Cập nhật
     @PutMapping("/{id}")
-    public ResponseEntity<BookCategory> updateCategory(@PathVariable Long id, @RequestBody BookCategory newCategory) {
-        return ResponseEntity.ok(categoryService.updateCategory(id, newCategory));
+    public ResponseEntity<CategoryResponse> updateCategory(
+            @PathVariable Long id,
+            @Valid @RequestBody CategoryRequest request
+    ) {
+        BookCategory updated = categoryService.updateCategory(id, request);
+        return ResponseEntity.ok(CategoryMapper.toResponse(updated));
     }
 
+    // ✅ Xóa
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCategory(@PathVariable Long id) {
-        categoryRepository.deleteById(id);
+        categoryService.deleteCategory(id);
         return ResponseEntity.noContent().build();
     }
 }

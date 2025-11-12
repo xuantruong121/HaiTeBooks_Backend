@@ -1,9 +1,11 @@
 package iuh.fit.haitebooks_backend.controller;
 
+import iuh.fit.haitebooks_backend.dtos.request.UserRequest;
 import iuh.fit.haitebooks_backend.dtos.response.UserResponse;
+import iuh.fit.haitebooks_backend.mapper.UserMapper;
 import iuh.fit.haitebooks_backend.model.User;
-import iuh.fit.haitebooks_backend.repository.UserRepository;
 import iuh.fit.haitebooks_backend.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -15,98 +17,65 @@ import java.util.List;
 @RequestMapping("/api/users")
 @CrossOrigin(origins = "*")
 public class UserController {
-    private final UserService userService;
-    private final UserRepository userRepository;
 
-    public UserController(UserService userService, UserRepository userRepository) {
+    private final UserService userService;
+    public UserController(UserService userService) {
         this.userService = userService;
-        this.userRepository = userRepository;
     }
 
+    // ✅ Lấy tất cả user
     @GetMapping("/all")
     public ResponseEntity<List<UserResponse>> getAllUsers() {
-        List<UserResponse> responses = userRepository.findAll()
+        List<UserResponse> responses = userService.getAllUsers()
                 .stream()
-                .map(u -> new UserResponse(
-                        u.getId(),
-                        u.getUsername(),
-                        u.getEmail(),
-                        u.getFullName(),
-                        u.getPhone(),
-                        u.getAddress(),
-                        u.getRole() != null ? u.getRole().getName() : null
-                ))
+                .map(UserMapper::toResponse)
                 .toList();
         return ResponseEntity.ok(responses);
     }
 
+    // ✅ Lấy user theo id
     @GetMapping("/{id}")
     public ResponseEntity<UserResponse> getUser(@PathVariable Long id) {
-        return userRepository.findById(id)
-                .map(u -> ResponseEntity.ok(new UserResponse(
-                        u.getId(),
-                        u.getUsername(),
-                        u.getEmail(),
-                        u.getFullName(),
-                        u.getPhone(),
-                        u.getAddress(),
-                        u.getRole() != null ? u.getRole().getName() : null
-                )))
-                .orElse(ResponseEntity.notFound().build());
+        User user = userService.getUserById(id);
+        return ResponseEntity.ok(UserMapper.toResponse(user));
     }
 
+    // ✅ Tạo user mới
+    @PostMapping
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody UserRequest request) {
+        User user = userService.createUser(request);
+        return ResponseEntity.ok(UserMapper.toResponse(user));
+    }
+
+    // ✅ Cập nhật user
     @PutMapping("/{id}")
-    public ResponseEntity<User> updateUser(@PathVariable Long id, @RequestBody User data) {
-        return ResponseEntity.ok(userService.updateUser(id, data));
+    public ResponseEntity<UserResponse> updateUser(@PathVariable Long id, @Valid @RequestBody UserRequest request) {
+        User updated = userService.updateUser(id, request);
+        return ResponseEntity.ok(UserMapper.toResponse(updated));
     }
 
+    // ✅ Xóa user
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }
 
+    // ✅ Lấy user hiện tại
     @GetMapping("/me")
     public ResponseEntity<UserResponse> getCurrentUser(@AuthenticationPrincipal UserDetails userDetails) {
-        User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        UserResponse response = new UserResponse(
-                user.getId(),
-                user.getUsername(),
-                user.getEmail(),
-                user.getFullName(),
-                user.getPhone(),
-                user.getAddress(),
-                user.getRole() != null ? user.getRole().getName() : null
-        );
-
-        return ResponseEntity.ok(response);
+        User user = userService.getByUsername(userDetails.getUsername());
+        return ResponseEntity.ok(UserMapper.toResponse(user));
     }
 
+    // ✅ Cập nhật user hiện tại
     @PutMapping("/me")
     public ResponseEntity<UserResponse> updateCurrentUser(
             @AuthenticationPrincipal UserDetails userDetails,
-            @RequestBody User data) {
+            @Valid @RequestBody UserRequest request) {
 
-        User user = userRepository.findByUsername(userDetails.getUsername())
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
-        user.setFullName(data.getFullName());
-        user.setPhone(data.getPhone());
-        user.setAddress(data.getAddress());
-        userRepository.save(user);
-
-        return ResponseEntity.ok(
-                new UserResponse(
-                        user.getId(),
-                        user.getUsername(),
-                        user.getEmail(),
-                        user.getFullName(),
-                        user.getPhone(),
-                        user.getAddress(),
-                        user.getRole() != null ? user.getRole().getName() : null
-                )
-        );
+        User current = userService.getByUsername(userDetails.getUsername());
+        User updated = userService.updateUser(current.getId(), request);
+        return ResponseEntity.ok(UserMapper.toResponse(updated));
     }
 }
