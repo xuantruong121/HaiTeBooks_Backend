@@ -1,9 +1,7 @@
 package iuh.fit.haitebooks_backend.controller;
 
 import iuh.fit.haitebooks_backend.dtos.request.OrderRequest;
-import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
 import iuh.fit.haitebooks_backend.dtos.response.OrderResponse;
-import iuh.fit.haitebooks_backend.mapper.BookMapper;
 import iuh.fit.haitebooks_backend.mapper.OrderMapper;
 import iuh.fit.haitebooks_backend.model.Order;
 import iuh.fit.haitebooks_backend.service.OrderService;
@@ -12,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/orders")
@@ -57,9 +56,12 @@ public class OrderController {
 
     // ✅ Cập nhật trạng thái đơn hàng
     @PutMapping("/{id}")
-    public ResponseEntity<OrderResponse> updateOrder(@PathVariable Long id, @RequestBody Order details) {
-        Order updated = orderService.updateOrder(id, details);
-        return ResponseEntity.ok(OrderMapper.toOrderResponse(updated));
+    public ResponseEntity<OrderResponse> updateOrder(
+            @PathVariable Long id,
+            @RequestBody Map<String, String> requestBody) {
+        String status = requestBody.get("status");
+        Order updatedOrder = orderService.updateOrderStatus(id, status);
+        return ResponseEntity.ok(OrderMapper.toOrderResponse(updatedOrder));
     }
 
     // ✅ Xóa đơn hàng

@@ -35,17 +35,24 @@ public class OrderService {
         Order order = new Order();
         order.setUser(user);
         order.setStatus(Status_Order.PENDING);
-        order.setTotal(0); // tính lại bên dưới
         order.setOrderDate(java.time.LocalDateTime.now());
+        order.setAddress(request.getAddress());
+        order.setNote(request.getNote());
 
-        // Tạo OrderItems
+        // Tạo OrderItems và trừ stock
         List<Order_Item> orderItems = request.getOrderItems().stream()
                 .map(itemRequest -> {
-                    // Tìm Book
                     Book book = bookRepository.findById(itemRequest.getBookId())
                             .orElseThrow(() -> new RuntimeException("Book not found with id: " + itemRequest.getBookId()));
 
-                    // Tạo Order_Item
+                    if (book.getStock() < itemRequest.getQuantity()) {
+                        throw new RuntimeException("Not enough stock for book: " + book.getTitle());
+                    }
+
+                    // Trừ tồn kho
+                    book.setStock(book.getStock() - itemRequest.getQuantity());
+                    bookRepository.save(book);
+
                     Order_Item item = new Order_Item();
                     item.setBook(book);
                     item.setQuantity(itemRequest.getQuantity());
@@ -73,6 +80,9 @@ public class OrderService {
 
     // ✅ Lấy đơn hàng theo user
     public List<Order> findByUser(Long userId) {
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("User not found with id: " + userId);
+        }
         return orderRepository.findByUserId(userId);
     }
 
@@ -82,19 +92,34 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Order not found with id " + id));
     }
 
-    // ✅ Cập nhật trạng thái đơn hàng
+    // ✅ Cập nhật trạng thái đơn hàng (có kiểm tra hợp lệ)
     @Transactional
-    public Order updateOrder(Long id, Order details) {
-        Order existing = getOrderById(id);
+    public Order updateOrderStatus(Long id, String status) {
+        Order order = getOrderById(id);
 
-        if (details.getStatus() != null) {
-            existing.setStatus(details.getStatus());
-        }
-        if (details.getTotal() > 0) {
-            existing.setTotal(details.getTotal());
-        }
+        try {
+            Status_Order newStatus = Status_Order.valueOf(status.toUpperCase());
+            Status_Order current = order.getStatus();
 
-        return orderRepository.save(existing);
+            // Kiểm tra luồng trạng thái hợp lệ
+            if (current == Status_Order.COMPLETED || current == Status_Order.CANCELLED) {
+                throw new RuntimeException("Cannot change status of completed or cancelled order");
+            }
+
+            if (current == Status_Order.PENDING && newStatus == Status_Order.COMPLETED) {
+                throw new RuntimeException("Order must be processed or shipped before completing");
+            }
+
+            if (current == Status_Order.PROCESSING && newStatus == Status_Order.PENDING) {
+                throw new RuntimeException("Cannot revert to pending once processing");
+            }
+
+            order.setStatus(newStatus);
+            return orderRepository.save(order);
+
+        } catch (IllegalArgumentException e) {
+            throw new RuntimeException("Invalid status: " + status);
+        }
     }
 
     // ✅ Xóa đơn hàng
