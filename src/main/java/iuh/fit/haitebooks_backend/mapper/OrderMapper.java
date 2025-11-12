@@ -11,6 +11,8 @@ public class OrderMapper {
         return new OrderResponse(
                 order.getId(),
                 order.getUser() != null ? order.getUser().getId() : null,
+                order.getUser() != null ? order.getUser().getUsername() : null,
+                order.getUser() != null ? order.getUser().getEmail() : null,
                 order.getTotal(),
                 order.getStatus() != null ? order.getStatus().name() : null,
                 order.getOrderDate()

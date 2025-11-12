@@ -1,12 +1,10 @@
 package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.OrderRequest;
-import iuh.fit.haitebooks_backend.mapper.OrderMapper;
 import iuh.fit.haitebooks_backend.model.*;
 import iuh.fit.haitebooks_backend.repository.BookRepository;
 import iuh.fit.haitebooks_backend.repository.OrderRepository;
 import iuh.fit.haitebooks_backend.repository.UserRepository;
-import org.aspectj.weaver.ast.Or;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,46 +27,51 @@ public class OrderService {
     // ✅ Tạo đơn hàng mới
     @Transactional
     public Order createOrder(OrderRequest request) {
-        // Kiểm tra user tồn tại
+        // Kiểm tra user
         User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found with id " + request.getUserId()));
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getUserId()));
 
-        // Lấy danh sách sách từ DB
-        List<Book> books = bookRepository.findAllById(request.getBookIds());
-        if (books.isEmpty()) {
-            throw new RuntimeException("No books found for given IDs");
-        }
-
-        // Tính tổng tiền
-        double total = books.stream().mapToDouble(Book::getPrice).sum();
-
-        // Tạo đối tượng Order
+        // Tạo Order entity
         Order order = new Order();
         order.setUser(user);
-        order.setTotal(total);
         order.setStatus(Status_Order.PENDING);
+        order.setTotal(0); // tính lại bên dưới
         order.setOrderDate(java.time.LocalDateTime.now());
 
-        // Tạo danh sách Order_Item
-        List<Order_Item> orderItems = books.stream().map(book -> {
-            Order_Item item = new Order_Item();
-            item.setOrder(order);
-            item.setBook(book);
-            item.setQuantity(1); // default = 1, có thể truyền trong request sau này
-            item.setPrice(book.getPrice());
-            return item;
-        }).collect(Collectors.toList());
+        // Tạo OrderItems
+        List<Order_Item> orderItems = request.getOrderItems().stream()
+                .map(itemRequest -> {
+                    // Tìm Book
+                    Book book = bookRepository.findById(itemRequest.getBookId())
+                            .orElseThrow(() -> new RuntimeException("Book not found with id: " + itemRequest.getBookId()));
+
+                    // Tạo Order_Item
+                    Order_Item item = new Order_Item();
+                    item.setBook(book);
+                    item.setQuantity(itemRequest.getQuantity());
+                    item.setPrice(itemRequest.getPrice());
+                    item.setOrder(order);
+                    return item;
+                })
+                .collect(Collectors.toList());
 
         order.setOrderItems(orderItems);
+
+        // Tính tổng tiền
+        double total = orderItems.stream()
+                .mapToDouble(i -> i.getPrice() * i.getQuantity())
+                .sum();
+        order.setTotal(total);
+
         return orderRepository.save(order);
     }
 
-    // ✅ Lấy danh sách toàn bộ đơn hàng
+    // ✅ Lấy tất cả đơn hàng
     public List<Order> getAllOrders() {
         return orderRepository.findAll();
     }
 
-    // ✅ Lấy danh sách đơn hàng theo User
+    // ✅ Lấy đơn hàng theo user
     public List<Order> findByUser(Long userId) {
         return orderRepository.findByUserId(userId);
     }
@@ -79,7 +82,7 @@ public class OrderService {
                 .orElseThrow(() -> new RuntimeException("Order not found with id " + id));
     }
 
-    // ✅ Cập nhật đơn hàng
+    // ✅ Cập nhật trạng thái đơn hàng
     @Transactional
     public Order updateOrder(Long id, Order details) {
         Order existing = getOrderById(id);
