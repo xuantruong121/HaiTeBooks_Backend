@@ -15,6 +15,6 @@ public class BookResponse {
     private int stock;
     private String description;
     private String imageUrl;
-    private String barcode;
+    private String barcode;       // chỉ giữ mã số
     private String categoryName;
 }

@@ -32,7 +32,7 @@ public class BookRequest {
 
     private String imageUrl;
 
-    @NotBlank(message = "Barcode cannot be blank")
+    // ✅ Không bắt buộc — BE sẽ tự sinh nếu null
     private String barcode;
 
     @NotNull(message = "Category ID cannot be null")

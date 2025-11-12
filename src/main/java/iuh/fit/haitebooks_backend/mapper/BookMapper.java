@@ -18,7 +18,7 @@ public class BookMapper {
                 book.getStock(),
                 book.getDescription(),
                 book.getImageUrl(),
-                book.getBarcode(),
+                book.getBarcode(), // chỉ trả chuỗi barcode
                 book.getCategory() != null ? book.getCategory().getName() : null
         );
     }
@@ -34,8 +34,8 @@ public class BookMapper {
         book.setStock(request.getStock());
         book.setDescription(request.getDescription());
         book.setImageUrl(request.getImageUrl());
-        book.setBarcode(request.getBarcode());
         book.setCategory(category);
+        // ❌ Không set barcode, BE sẽ sinh tự động
         return book;
     }
 
@@ -46,7 +46,7 @@ public class BookMapper {
         book.setStock(request.getStock());
         book.setDescription(request.getDescription());
         book.setImageUrl(request.getImageUrl());
-        book.setBarcode(request.getBarcode());
         book.setCategory(category);
+        // ❌ Không cho sửa barcode khi update
     }
 }

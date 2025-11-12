@@ -43,7 +43,7 @@ public class BookController {
         return ResponseEntity.ok(booksPage);
     }
 
-    // ✅ Quét barcode
+    // ✅ Lấy sách bằng barcode (VD: quét barcode)
     @GetMapping("/barcode/{code}")
     public ResponseEntity<BookResponse> getBookByBarcode(@PathVariable String code) {
         Book book = bookService.findByBarcode(code);
@@ -52,7 +52,7 @@ public class BookController {
                 : ResponseEntity.notFound().build();
     }
 
-    // ✅ Tạo mới
+    // ✅ Thêm sách mới (tự sinh barcode nếu chưa có)
     @PostMapping
     public ResponseEntity<BookResponse> createBook(@Valid @RequestBody BookRequest request) {
         Book created = bookService.createBook(request);
@@ -66,7 +66,7 @@ public class BookController {
         return ResponseEntity.ok(BookMapper.toBookResponse(book));
     }
 
-    // ✅ Cập nhật
+    // ✅ Cập nhật sách (không thay đổi barcode)
     @PutMapping("/{id}")
     public ResponseEntity<BookResponse> updateBook(
             @PathVariable Long id,
@@ -76,7 +76,7 @@ public class BookController {
         return ResponseEntity.ok(BookMapper.toBookResponse(updated));
     }
 
-    // ✅ Xóa
+    // ✅ Xóa sách
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteBook(@PathVariable Long id) {
         bookService.deleteBook(id);
