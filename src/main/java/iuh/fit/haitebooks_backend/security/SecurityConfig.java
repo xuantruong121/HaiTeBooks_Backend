@@ -65,7 +65,14 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/books/barcode/**").permitAll()
 
                         // Swagger / Docs
-                        .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll()
+                        .requestMatchers(
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/swagger-resources/**",
+                                "/webjars/**",
+                                "/error"
+                        ).permitAll()
 
                         // Authenticated user routes
                         .requestMatchers("/api/users/me", "/api/users/me/**").authenticated()
@@ -82,7 +89,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/all", "/api/users/{id}").hasRole("ADMIN")
 
                         // Default deny
-                        .anyRequest().denyAll()
+                        .anyRequest().authenticated()
                 )
                 // Add JWT filter before Spring Security authentication
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);

@@ -9,10 +9,7 @@ import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
 import java.security.Key;
-import java.util.Base64;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Component
 public class JwtUtil {
@@ -21,12 +18,34 @@ public class JwtUtil {
     private final long expirationMs;
 
     public JwtUtil(
-            @Value("${app.jwt.secret}") String secret,
-            @Value("${app.jwt.expiration-ms}") long expirationMs
+            @Value("${app.jwt.secret:}") String secret,
+            @Value("${app.jwt.expiration-ms:86400000}") long expirationMs
     ) {
-        byte[] keyBytes = Base64.getDecoder().decode(secret);
-        this.key = Keys.hmacShaKeyFor(keyBytes);
         this.expirationMs = expirationMs;
+
+        if (secret == null || secret.isBlank()) {
+            // dev fallback: dùng một key tạm (CHỈ DÙNG TRONG DEV)
+            byte[] fallback = "dev-secret-dev-secret-dev-secret-1234".getBytes(StandardCharsets.UTF_8);
+            this.key = Keys.hmacShaKeyFor(Arrays.copyOf(fallback, 32)); // đảm bảo 32 bytes min
+            System.out.println("⚠️ Warning: JWT secret empty, using DEV fallback key. Set app.jwt.secret in properties.");
+        } else {
+            try {
+                // thử decode base64 trước; nếu fail thì dùng raw bytes
+                byte[] keyBytes;
+                try {
+                    keyBytes = Base64.getDecoder().decode(secret);
+                } catch (IllegalArgumentException ex) {
+                    keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+                }
+                // ensure length >= 32
+                if (keyBytes.length < 32) {
+                    keyBytes = Arrays.copyOf(keyBytes, 32);
+                }
+                this.key = Keys.hmacShaKeyFor(keyBytes);
+            } catch (Exception e) {
+                throw new IllegalStateException("Failed to create JWT signing key: " + e.getMessage(), e);
+            }
+        }
     }
 
     public String generateToken(String username, List<String> roles) {
