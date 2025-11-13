@@ -1,5 +1,6 @@
 package iuh.fit.haitebooks_backend.service;
 
+import iuh.fit.haitebooks_backend.dtos.request.NotificationRequest;
 import iuh.fit.haitebooks_backend.dtos.request.OrderRequest;
 import iuh.fit.haitebooks_backend.model.*;
 import iuh.fit.haitebooks_backend.repository.BookRepository;
@@ -8,6 +9,7 @@ import iuh.fit.haitebooks_backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,60 +19,69 @@ public class OrderService {
     private final OrderRepository orderRepository;
     private final BookRepository bookRepository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
 
-    public OrderService(OrderRepository orderRepository, BookRepository bookRepository, UserRepository userRepository) {
+    public OrderService(OrderRepository orderRepository, BookRepository bookRepository, UserRepository userRepository,
+                        NotificationService notificationService) {
         this.orderRepository = orderRepository;
         this.bookRepository = bookRepository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     // ✅ Tạo đơn hàng mới
     @Transactional
     public Order createOrder(OrderRequest request) {
-        // Kiểm tra user
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + request.getUserId()));
 
-        // Tạo Order entity
+        User user = userRepository.findById(request.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
         Order order = new Order();
         order.setUser(user);
         order.setStatus(Status_Order.PENDING);
-        order.setOrderDate(java.time.LocalDateTime.now());
+        order.setOrderDate(LocalDateTime.now());
         order.setAddress(request.getAddress());
         order.setNote(request.getNote());
 
-        // Tạo OrderItems và trừ stock
-        List<Order_Item> orderItems = request.getOrderItems().stream()
-                .map(itemRequest -> {
-                    Book book = bookRepository.findById(itemRequest.getBookId())
-                            .orElseThrow(() -> new RuntimeException("Book not found with id: " + itemRequest.getBookId()));
+        List<Order_Item> items = request.getOrderItems().stream().map(itemReq -> {
 
-                    if (book.getStock() < itemRequest.getQuantity()) {
-                        throw new RuntimeException("Not enough stock for book: " + book.getTitle());
-                    }
+            Book book = bookRepository.findById(itemReq.getBookId())
+                    .orElseThrow(() -> new RuntimeException("Book not found"));
 
-                    // Trừ tồn kho
-                    book.setStock(book.getStock() - itemRequest.getQuantity());
-                    bookRepository.save(book);
+            if (book.getStock() < itemReq.getQuantity()) {
+                throw new RuntimeException("Not enough stock for: " + book.getTitle());
+            }
 
-                    Order_Item item = new Order_Item();
-                    item.setBook(book);
-                    item.setQuantity(itemRequest.getQuantity());
-                    item.setPrice(itemRequest.getPrice());
-                    item.setOrder(order);
-                    return item;
-                })
-                .collect(Collectors.toList());
+            book.setStock(book.getStock() - itemReq.getQuantity());
+            bookRepository.save(book);
 
-        order.setOrderItems(orderItems);
+            Order_Item oi = new Order_Item();
+            oi.setOrder(order);
+            oi.setBook(book);
+            oi.setPrice(itemReq.getPrice());
+            oi.setQuantity(itemReq.getQuantity());
+            return oi;
 
-        // Tính tổng tiền
-        double total = orderItems.stream()
+        }).toList();
+
+        order.setOrderItems(items);
+
+        double total = items.stream()
                 .mapToDouble(i -> i.getPrice() * i.getQuantity())
                 .sum();
+
         order.setTotal(total);
 
-        return orderRepository.save(order);
+        orderRepository.save(order);
+
+        // 🔥 Gửi notification realtime cho user
+        NotificationRequest noti = new NotificationRequest();
+        noti.setReceiverId(user.getId());
+        noti.setTitle("Đặt hàng thành công!");
+        noti.setContent("Đơn hàng #" + order.getId() + " đã được tạo.");
+        notificationService.send(noti, null);
+
+        return order;
     }
 
     // ✅ Lấy tất cả đơn hàng
@@ -115,7 +126,46 @@ public class OrderService {
             }
 
             order.setStatus(newStatus);
-            return orderRepository.save(order);
+            Order saved = orderRepository.save(order);
+
+            // --- Gửi notification cho user của đơn hàng ---
+            try {
+                Long receiverId = saved.getUser() != null ? saved.getUser().getId() : null;
+                if (receiverId != null) {
+                    NotificationRequest noti = new NotificationRequest();
+                    noti.setReceiverId(receiverId);
+
+                    // Tiêu đề & nội dung tuỳ theo trạng thái
+                    String title = "Cập nhật trạng thái đơn hàng";
+                    String content = "Đơn hàng #" + saved.getId() + " đã chuyển sang trạng thái: " + newStatus.name();
+
+                    if (newStatus == Status_Order.CANCELLED) {
+                        title = "Đơn hàng đã bị huỷ";
+                        content = "Đơn hàng #" + saved.getId() + " đã bị huỷ. Vui lòng liên hệ cửa hàng để biết thêm chi tiết.";
+                    } else if (newStatus == Status_Order.SHIPPING) {
+                        title = "Đơn hàng đang giao";
+                        content = "Đơn hàng #" + saved.getId() + " đang được giao đến địa chỉ: " + (saved.getAddress() != null ? saved.getAddress() : "");
+                    } else if (newStatus == Status_Order.PROCESSING) {
+                        title = "Đơn hàng đang xử lý";
+                        content = "Đơn hàng #" + saved.getId() + " đang được xử lý.";
+                    } else if (newStatus == Status_Order.COMPLETED) {
+                        title = "Đơn hàng đã hoàn tất";
+                        content = "Đơn hàng #" + saved.getId() + " đã giao thành công.";
+                    }
+
+                    noti.setTitle(title);
+                    noti.setContent(content);
+
+                    // gửi realtime + lưu DB. senderId = null (nếu muốn, controller có thể truyền adminId)
+                    notificationService.send(noti, null);
+                }
+            } catch (Exception ex) {
+                // Không để lỗi notification phá flow chính — chỉ log (ở đây ném Runtime để dev thấy)
+                // Bạn có thể đổi thành logger.warn(...)
+                System.err.println("Không gửi được notification: " + ex.getMessage());
+            }
+
+            return saved;
 
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid status: " + status);

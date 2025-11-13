@@ -1,4 +1,4 @@
-package iuh.fit.haitebooks_backend.security;
+package iuh.fit.haitebooks_backend.security_and_config;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;

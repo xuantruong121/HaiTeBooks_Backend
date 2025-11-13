@@ -1,9 +1,7 @@
-package iuh.fit.haitebooks_backend.security;
+package iuh.fit.haitebooks_backend.security_and_config;
 
-import io.github.cdimascio.dotenv.Dotenv;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 

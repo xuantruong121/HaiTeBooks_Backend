@@ -1,4 +1,4 @@
-package iuh.fit.haitebooks_backend.security;
+package iuh.fit.haitebooks_backend.security_and_config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -27,19 +27,16 @@ public class SecurityConfig {
         this.jwtUtil = jwtUtil;
     }
 
-    // AuthenticationManager Bean
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
-    // PasswordEncoder Bean
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
-    // JWT Filter Bean
     @Bean
     public JwtAuthenticationFilter jwtAuthenticationFilter() {
         return new JwtAuthenticationFilter(jwtUtil, userDetailsService);
@@ -47,24 +44,30 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+
         http
                 .cors(Customizer.withDefaults())
                 .csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(sm ->
-                        sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
 
-                        // Public Auth APIs
+                        /* ================= PUBLIC APIS ================= */
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // Public GET APIs
+                        // Public GET (Books, Categories, Barcode, AI…)
                         .requestMatchers(HttpMethod.GET, "/api/books/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ai/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/books/barcode/**").permitAll()
 
-                        // Swagger / Docs
+                        // Public WebSocket
+                        .requestMatchers("/ws/**").permitAll()
+
+                        // Public images (nếu Cloudinary API proxy)
+                        .requestMatchers("/api/files/**").permitAll()
+
+                        /* ================= SWAGGER ================= */
                         .requestMatchers(
                                 "/v3/api-docs/**",
                                 "/swagger-ui/**",
@@ -74,27 +77,42 @@ public class SecurityConfig {
                                 "/error"
                         ).permitAll()
 
-                        // Authenticated user routes
+                        /* ================= AUTHENTICATED USERS ================= */
                         .requestMatchers("/api/users/me", "/api/users/me/**").authenticated()
                         .requestMatchers("/api/orders/**").authenticated()
                         .requestMatchers("/api/payments/**").authenticated()
                         .requestMatchers("/api/cart/**").authenticated()
-                        .requestMatchers("/api/reviews/**").authenticated()
 
-                        // Admin-only routes
+                        // Reviews: GET public, POST/PUT/DELETE must login
+                        .requestMatchers(HttpMethod.POST, "/api/reviews/**").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/reviews/**").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/reviews/**").authenticated()
+
+                        // Notifications (must login)
+                        .requestMatchers("/api/notifications/**").authenticated()
+
+                        /* ================= ADMIN ROUTES ================= */
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                        // Books CRUD (admin only)
                         .requestMatchers(HttpMethod.POST, "/api/books/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/books/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/books/**").hasRole("ADMIN")
-                        .requestMatchers("/api/users/all", "/api/users/{id}").hasRole("ADMIN")
+
+                        // Categories CRUD (admin only)
                         .requestMatchers(HttpMethod.POST, "/api/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasRole("ADMIN")
 
-                        // Default deny
+                        // Users
+                        .requestMatchers("/api/users/all").hasRole("ADMIN")
+                        .requestMatchers("/api/users/{id}").hasRole("ADMIN")
+
+                        /* ================= DEFAULT ================= */
                         .anyRequest().authenticated()
                 )
-                // Add JWT filter before Spring Security authentication
+
+                // JWT Filter
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
