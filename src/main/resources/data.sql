@@ -29,10 +29,6 @@ CREATE TABLE users (
                        FOREIGN KEY (role_id) REFERENCES roles(id)
 );
 
--- ✔ Mật khẩu BCrypt:
--- admin123 → $2a$10$GB09.wpAwHAP09fsQvN/LON7RHE/jkGWExDuWuBuD1OYCuOSOxfuW
--- user123 →  $2a$10$6Tp/gz0GSxWd/vvsLQzcYOhRXVpyrhKj9qCzPKTjmZZqgdR18evxi
-
 INSERT INTO users (username, password, email, full_name, address, role_id)
 VALUES
     ('admin', '$2a$10$GB09.wpAwHAP09fsQvN/LON7RHE/jkGWExDuWuBuD1OYCuOSOxfuW',
@@ -113,24 +109,74 @@ INSERT INTO cart_items (user_id, book_id, quantity) VALUES
                                                         (2, 2, 2);
 
 -- ========================
--- 6️⃣ ORDERS
+-- 6️⃣ PROMOTIONS
+-- ========================
+CREATE TABLE promotions (
+                            id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                            name VARCHAR(255) NOT NULL,
+                            code VARCHAR(50) NOT NULL UNIQUE,
+                            discount_percent DOUBLE NOT NULL,
+                            start_date DATE NOT NULL,
+                            end_date DATE NOT NULL,
+                            quantity INT NOT NULL,
+                            is_active BOOLEAN DEFAULT TRUE,
+
+                            created_by_user_id BIGINT,
+                            approved_by_user_id BIGINT,
+
+                            FOREIGN KEY (created_by_user_id) REFERENCES users(id),
+                            FOREIGN KEY (approved_by_user_id) REFERENCES users(id)
+);
+
+INSERT INTO promotions (name, code, discount_percent, start_date, end_date, quantity, is_active, created_by_user_id)
+VALUES
+    ('Giảm 20% tháng 12', 'SALE20', 20, '2025-12-01', '2025-12-31', 50, TRUE, 1),
+
+    ('Tặng 10% khách hàng mới', 'NEW10', 10, '2025-01-01', '2025-12-31', 100, TRUE, 1);
+
+-- ========================
+-- 7️⃣ PROMOTION LOGS
+-- ========================
+CREATE TABLE promotion_logs (
+                                id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                                promotion_id BIGINT NOT NULL,
+                                actor_user_id BIGINT NOT NULL,
+                                action VARCHAR(50) NOT NULL,
+                                log_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+                                FOREIGN KEY (promotion_id) REFERENCES promotions(id),
+                                FOREIGN KEY (actor_user_id) REFERENCES users(id)
+);
+
+INSERT INTO promotion_logs (promotion_id, actor_user_id, action)
+VALUES
+    (1, 1, 'CREATE'),
+    (2, 1, 'CREATE');
+
+-- ========================
+-- 8️⃣ ORDERS
 -- ========================
 CREATE TABLE orders (
                         id BIGINT AUTO_INCREMENT PRIMARY KEY,
                         user_id BIGINT NOT NULL,
                         order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                         total DOUBLE NOT NULL,
+
+                        applied_promotion_id BIGINT NULL,
+
                         status_order ENUM('PENDING','PROCESSING','SHIPPING','COMPLETED','CANCELLED') DEFAULT 'PENDING',
                         address VARCHAR(255),
                         note VARCHAR(500),
-                        FOREIGN KEY (user_id) REFERENCES users(id)
+
+                        FOREIGN KEY (user_id) REFERENCES users(id),
+                        FOREIGN KEY (applied_promotion_id) REFERENCES promotions(id)
 );
 
 INSERT INTO orders (user_id, total, status_order, address, note)
 VALUES (2, 770000, 'COMPLETED', 'TP. Hồ Chí Minh', 'Giao trong ngày');
 
 -- ========================
--- 7️⃣ ORDER ITEMS
+-- 9️⃣ ORDER ITEMS
 -- ========================
 CREATE TABLE order_items (
                              id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -147,7 +193,7 @@ INSERT INTO order_items (order_id, book_id, quantity, price) VALUES
                                                                  (1, 2, 1, 420000);
 
 -- ========================
--- 8️⃣ REVIEWS
+-- 🔟 REVIEWS
 -- ========================
 CREATE TABLE reviews (
                          id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -166,7 +212,7 @@ INSERT INTO reviews (book_id, user_id, rating, comment) VALUES
                                                             (4, 2, 5, 'Truyền cảm hứng tài chính.');
 
 -- ========================
--- 9️⃣ PAYMENTS
+-- 1️⃣1️⃣ PAYMENTS
 -- ========================
 CREATE TABLE payments (
                           id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -182,7 +228,7 @@ INSERT INTO payments (order_id, method, amount, status_payment)
 VALUES (1, 'MOMO', 770000, 'SUCCESS');
 
 -- ========================
--- 🔟 BOOK EMBEDDINGS
+-- 1️⃣2️⃣ BOOK EMBEDDINGS
 -- ========================
 CREATE TABLE book_embeddings (
                                  id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -198,7 +244,7 @@ VALUES
     (2, '[0.77, 0.42, 0.11, 0.93, 0.21, 0.34]');
 
 -- ========================
--- 1️⃣1️⃣ NOTIFICATIONS
+-- 1️⃣3️⃣ NOTIFICATIONS
 -- ========================
 CREATE TABLE notifications (
                                id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -206,10 +252,8 @@ CREATE TABLE notifications (
                                content TEXT,
                                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                                is_read BOOLEAN DEFAULT FALSE,
-
                                sender_id BIGINT NULL,
                                receiver_id BIGINT NOT NULL,
-
                                FOREIGN KEY (sender_id) REFERENCES users(id),
                                FOREIGN KEY (receiver_id) REFERENCES users(id)
 );

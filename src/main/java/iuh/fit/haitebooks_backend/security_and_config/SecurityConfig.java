@@ -54,17 +54,20 @@ public class SecurityConfig {
                         /* ================= PUBLIC APIS ================= */
                         .requestMatchers("/api/auth/**").permitAll()
 
-                        // Public GET (Books, Categories, Barcode, AI…)
+                        // Public GET
                         .requestMatchers(HttpMethod.GET, "/api/books/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ai/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/books/barcode/**").permitAll()
 
-                        // Public WebSocket
+                        // 🔥 Public validate promotion
+                        .requestMatchers(HttpMethod.GET, "/api/promotions/validate/**").permitAll()
+
+                        // WebSocket
                         .requestMatchers("/ws/**").permitAll()
 
-                        // Public images (nếu Cloudinary API proxy)
+                        // Public Files Proxy
                         .requestMatchers("/api/files/**").permitAll()
 
                         /* ================= SWAGGER ================= */
@@ -83,23 +86,38 @@ public class SecurityConfig {
                         .requestMatchers("/api/payments/**").authenticated()
                         .requestMatchers("/api/cart/**").authenticated()
 
-                        // Reviews: GET public, POST/PUT/DELETE must login
+                        // Reviews (POST/PUT/DELETE require login)
                         .requestMatchers(HttpMethod.POST, "/api/reviews/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/reviews/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/reviews/**").authenticated()
 
-                        // Notifications (must login)
+                        // Notifications
                         .requestMatchers("/api/notifications/**").authenticated()
+
+                        /* ================= PROMOTIONS ================= */
+
+                        // ✔ USER chỉ được validate và xem
+                        .requestMatchers(HttpMethod.GET, "/api/promotions/**").permitAll()
+
+                        // ✔ ADMIN CRUD + workflow
+                        .requestMatchers(HttpMethod.POST, "/api/promotions/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.PUT, "/api/promotions/**").hasRole("ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/promotions/**").hasRole("ADMIN")
+
+                        // Approve / Reject / Deactivate (ADMIN only)
+                        .requestMatchers("/api/promotions/approve/**").hasRole("ADMIN")
+                        .requestMatchers("/api/promotions/reject/**").hasRole("ADMIN")
+                        .requestMatchers("/api/promotions/deactivate/**").hasRole("ADMIN")
 
                         /* ================= ADMIN ROUTES ================= */
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
 
-                        // Books CRUD (admin only)
+                        // Books CRUD
                         .requestMatchers(HttpMethod.POST, "/api/books/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/books/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/books/**").hasRole("ADMIN")
 
-                        // Categories CRUD (admin only)
+                        // Categories CRUD
                         .requestMatchers(HttpMethod.POST, "/api/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.PUT, "/api/categories/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/categories/**").hasRole("ADMIN")
@@ -112,7 +130,6 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
 
-                // JWT Filter
                 .addFilterBefore(jwtAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

@@ -14,4 +14,5 @@ public class OrderRequest {
     private List<OrderItemRequest> orderItems;
     private String address;
     private String note;
+    private String promotionCode;
 }

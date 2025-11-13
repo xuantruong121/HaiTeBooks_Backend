@@ -20,13 +20,15 @@ public class OrderService {
     private final BookRepository bookRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final PromotionService promotionService;
 
     public OrderService(OrderRepository orderRepository, BookRepository bookRepository, UserRepository userRepository,
-                        NotificationService notificationService) {
+                        NotificationService notificationService, PromotionService promotionService) {
         this.orderRepository = orderRepository;
         this.bookRepository = bookRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.promotionService = promotionService;
     }
 
     // ✅ Tạo đơn hàng mới
@@ -43,6 +45,19 @@ public class OrderService {
         order.setAddress(request.getAddress());
         order.setNote(request.getNote());
 
+        // ========================================================
+        // 🔥 ÁP DỤNG KHUYẾN MÃI (NẾU CÓ)
+        // ========================================================
+        Promotion appliedPromotion = null;
+
+        if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
+            appliedPromotion = promotionService.applyPromotion(request.getPromotionCode());
+            order.setAppliedPromotion(appliedPromotion);
+        }
+
+        // ========================================================
+        // Xử lý cart items
+        // ========================================================
         List<Order_Item> items = request.getOrderItems().stream().map(itemReq -> {
 
             Book book = bookRepository.findById(itemReq.getBookId())
@@ -55,30 +70,38 @@ public class OrderService {
             book.setStock(book.getStock() - itemReq.getQuantity());
             bookRepository.save(book);
 
-            Order_Item oi = new Order_Item();
-            oi.setOrder(order);
-            oi.setBook(book);
-            oi.setPrice(itemReq.getPrice());
-            oi.setQuantity(itemReq.getQuantity());
-            return oi;
+            Order_Item item = new Order_Item();
+            item.setOrder(order);
+            item.setBook(book);
+            item.setQuantity(itemReq.getQuantity());
+            item.setPrice(itemReq.getPrice());
+            return item;
 
         }).toList();
 
         order.setOrderItems(items);
 
+        // ========================================================
+        // 🔥 Tính tổng tiền sau khi trừ khuyến mãi
+        // ========================================================
         double total = items.stream()
                 .mapToDouble(i -> i.getPrice() * i.getQuantity())
                 .sum();
+
+        if (appliedPromotion != null) {
+            double discount = total * (appliedPromotion.getDiscountPercent() / 100.0);
+            total = total - discount;
+        }
 
         order.setTotal(total);
 
         orderRepository.save(order);
 
-        // 🔥 Gửi notification realtime cho user
+        // 🔥 Gửi thông báo cho user
         NotificationRequest noti = new NotificationRequest();
         noti.setReceiverId(user.getId());
         noti.setTitle("Đặt hàng thành công!");
-        noti.setContent("Đơn hàng #" + order.getId() + " đã được tạo.");
+        noti.setContent("Đơn #" + order.getId() + " đã được tạo.");
         notificationService.send(noti, null);
 
         return order;

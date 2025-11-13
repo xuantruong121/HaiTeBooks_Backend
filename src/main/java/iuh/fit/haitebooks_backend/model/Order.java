@@ -54,4 +54,8 @@ public class Order {
     @OneToOne(mappedBy = "order", cascade = CascadeType.ALL)
     @JsonManagedReference
     private Payment payment;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "promotion_id")
+    private Promotion appliedPromotion;
 }

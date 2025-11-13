@@ -1,4 +1,4 @@
-package iuh.fit.haitebooks_backend.websocket;
+package iuh.fit.haitebooks_backend.security_and_config;
 
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.simp.config.MessageBrokerRegistry;
