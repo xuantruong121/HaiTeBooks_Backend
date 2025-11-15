@@ -69,4 +69,9 @@ public class User {
     @OneToMany(mappedBy = "sender", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     @JsonIgnore
     private List<Notification> notificationsSent;
+
+    // ✅ Mapping to FavoriteBook
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<FavoriteBook> favoriteBooks;
 }

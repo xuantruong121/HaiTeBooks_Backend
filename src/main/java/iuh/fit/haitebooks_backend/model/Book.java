@@ -60,4 +60,9 @@ public class Book {
     @OneToOne(mappedBy = "book", cascade = CascadeType.ALL)
     @JsonIgnore
     private BookEmbedding bookEmbedding;
+
+    // ✅ Mapping to FavoriteBook
+    @OneToMany(mappedBy = "book", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @JsonIgnore
+    private List<FavoriteBook> favoriteBooks;
 }

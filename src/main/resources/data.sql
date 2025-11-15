@@ -6,30 +6,31 @@ USE haitebooks_db;
 -- 1️⃣ ROLES
 -- ========================
 CREATE TABLE roles (
-                       id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                       name VARCHAR(50) NOT NULL UNIQUE
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE
 );
 
-INSERT INTO roles (name) VALUES ('ADMIN'), ('USER');
+INSERT INTO roles (name) VALUES 
+    ('ADMIN'), 
+    ('USER');
 
 -- ========================
 -- 2️⃣ USERS
 -- ========================
 CREATE TABLE users (
-                       id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                       username VARCHAR(100) NOT NULL UNIQUE,
-                       password VARCHAR(255) NOT NULL,
-                       email VARCHAR(150) NOT NULL UNIQUE,
-                       full_name VARCHAR(150) NOT NULL,
-                       address VARCHAR(255),
-                       enabled BOOLEAN DEFAULT TRUE,
-                       phone VARCHAR(255),
-                       role_id BIGINT NOT NULL,
-                       FOREIGN KEY (role_id) REFERENCES roles(id)
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(150) NOT NULL UNIQUE,
+    full_name VARCHAR(150) NOT NULL,
+    address VARCHAR(255),
+    enabled BOOLEAN DEFAULT TRUE,
+    phone VARCHAR(255),
+    role_id BIGINT NOT NULL,
+    FOREIGN KEY (role_id) REFERENCES roles(id)
 );
 
-INSERT INTO users (username, password, email, full_name, address, role_id)
-VALUES
+INSERT INTO users (username, password, email, full_name, address, role_id) VALUES
     ('admin', '$2a$10$GB09.wpAwHAP09fsQvN/LON7RHE/jkGWExDuWuBuD1OYCuOSOxfuW',
      'admin@bookstore.com', 'Administrator', 'Hà Nội', 1),
     ('user1', '$2a$10$6Tp/gz0GSxWd/vvsLQzcYOhRXVpyrhKj9qCzPKTjmZZqgdR18evxi',
@@ -39,89 +40,87 @@ VALUES
 -- 3️⃣ BOOK CATEGORIES
 -- ========================
 CREATE TABLE book_categories (
-                                 id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                 name VARCHAR(100) NOT NULL UNIQUE,
-                                 description TEXT
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT
 );
 
 INSERT INTO book_categories (name, description) VALUES
-                                                    ('Công nghệ thông tin', 'Sách lập trình, công nghệ, phần mềm'),
-                                                    ('Kinh doanh', 'Sách về kinh tế, quản lý, marketing'),
-                                                    ('Tiểu thuyết', 'Sách truyện dài, văn học'),
-                                                    ('Thiếu nhi', 'Sách cho trẻ em'),
-                                                    ('Khoa học', 'Sách nghiên cứu và khoa học ứng dụng');
+    ('Công nghệ thông tin', 'Sách lập trình, công nghệ, phần mềm'),
+    ('Kinh doanh', 'Sách về kinh tế, quản lý, marketing'),
+    ('Tiểu thuyết', 'Sách truyện dài, văn học'),
+    ('Thiếu nhi', 'Sách cho trẻ em'),
+    ('Khoa học', 'Sách nghiên cứu và khoa học ứng dụng');
 
 -- ========================
 -- 4️⃣ BOOKS
 -- ========================
 CREATE TABLE books (
-                       id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                       title VARCHAR(255) NOT NULL,
-                       author VARCHAR(255) NOT NULL,
-                       barcode VARCHAR(255) NOT NULL UNIQUE,
-                       price DOUBLE NOT NULL,
-                       stock INT NOT NULL,
-                       description VARCHAR(1000) NOT NULL,
-                       image_url VARCHAR(255),
-                       category_id BIGINT NOT NULL,
-                       FOREIGN KEY (category_id) REFERENCES book_categories(id)
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    author VARCHAR(255) NOT NULL,
+    barcode VARCHAR(255) NOT NULL UNIQUE,
+    price DOUBLE NOT NULL,
+    stock INT NOT NULL,
+    description VARCHAR(1000) NOT NULL,
+    image_url VARCHAR(255),
+    category_id BIGINT NOT NULL,
+    FOREIGN KEY (category_id) REFERENCES book_categories(id)
 );
 
-INSERT INTO books
-(title, author, barcode, price, stock, description, image_url, category_id) VALUES
-                                                                                ('Clean Code', 'Robert C. Martin', '9780132350884', 350000, 20,
-                                                                                 'A handbook of agile software craftsmanship.',
-                                                                                 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848267/cleancode_kwld08.png', 1),
-                                                                                ('The Pragmatic Programmer', 'Andrew Hunt', '9780201616224', 420000, 15,
-                                                                                 'Journey to mastery in software development.',
-                                                                                 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848267/pragmatic_nmcybl.png', 1),
-                                                                                ('Design Patterns', 'Erich Gamma', '9780201633610', 480000, 10,
-                                                                                 'Elements of reusable object-oriented software.',
-                                                                                 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/designpatterns_bjpzpe.jpg', 1),
-                                                                                ('Rich Dad Poor Dad', 'Robert Kiyosaki', '9780446677455', 250000, 30,
-                                                                                 'What the rich teach their kids about money.',
-                                                                                 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/richdad_fnvbwv.png', 2),
-                                                                                ('Harry Potter and the Sorcerer''s Stone', 'J.K. Rowling', '9780747532699', 320000, 50,
-                                                                                 'Fantasy novel for all ages.',
-                                                                                 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/harrypotter_kwpopd.webp', 3);
+INSERT INTO books (title, author, barcode, price, stock, description, image_url, category_id) VALUES
+    ('Clean Code', 'Robert C. Martin', '9780132350884', 350000, 20,
+     'A handbook of agile software craftsmanship.',
+     'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848267/cleancode_kwld08.png', 1),
+    ('The Pragmatic Programmer', 'Andrew Hunt', '9780201616224', 420000, 15,
+     'Journey to mastery in software development.',
+     'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848267/pragmatic_nmcybl.png', 1),
+    ('Design Patterns', 'Erich Gamma', '9780201633610', 480000, 10,
+     'Elements of reusable object-oriented software.',
+     'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/designpatterns_bjpzpe.jpg', 1),
+    ('Rich Dad Poor Dad', 'Robert Kiyosaki', '9780446677455', 250000, 30,
+     'What the rich teach their kids about money.',
+     'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/richdad_fnvbwv.png', 2),
+    ('Harry Potter and the Sorcerer''s Stone', 'J.K. Rowling', '9780747532699', 320000, 50,
+     'Fantasy novel for all ages.',
+     'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/harrypotter_kwpopd.webp', 3);
 
 -- ========================
 -- 5️⃣ CART ITEMS
 -- ========================
 CREATE TABLE cart_items (
-                            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                            user_id BIGINT NOT NULL,
-                            book_id BIGINT NOT NULL,
-                            quantity INT NOT NULL DEFAULT 1,
-                            FOREIGN KEY (user_id) REFERENCES users(id),
-                            FOREIGN KEY (book_id) REFERENCES books(id),
-                            UNIQUE(user_id, book_id)
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    book_id BIGINT NOT NULL,
+    quantity INT NOT NULL DEFAULT 1,
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (book_id) REFERENCES books(id),
+    UNIQUE(user_id, book_id)
 );
 
 INSERT INTO cart_items (user_id, book_id, quantity) VALUES
-                                                        (2, 1, 1),
-                                                        (2, 2, 2);
+    (2, 1, 1),
+    (2, 2, 2);
 
 -- ========================
 -- 6️⃣ PROMOTIONS
 -- ========================
 CREATE TABLE promotions (
-                            id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                            name VARCHAR(255) NOT NULL,
-                            code VARCHAR(50) NOT NULL UNIQUE,
-                            discount_percent DOUBLE NOT NULL,
-                            start_date DATE NOT NULL,
-                            end_date DATE NOT NULL,
-                            quantity INT NOT NULL,
-                            is_active BOOLEAN DEFAULT TRUE,
-                            created_by_user_id BIGINT,
-                            approved_by_user_id BIGINT,
-                            FOREIGN KEY (created_by_user_id) REFERENCES users(id),
-                            FOREIGN KEY (approved_by_user_id) REFERENCES users(id)
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    code VARCHAR(50) NOT NULL UNIQUE,
+    discount_percent DOUBLE NOT NULL,
+    start_date DATE NOT NULL,
+    end_date DATE NOT NULL,
+    quantity INT NOT NULL,
+    is_active BOOLEAN DEFAULT TRUE,
+    created_by_user_id BIGINT,
+    approved_by_user_id BIGINT,
+    FOREIGN KEY (created_by_user_id) REFERENCES users(id),
+    FOREIGN KEY (approved_by_user_id) REFERENCES users(id)
 );
 
-INSERT INTO promotions (name, code, discount_percent, start_date, end_date, quantity, is_active, created_by_user_id)
-VALUES
+INSERT INTO promotions (name, code, discount_percent, start_date, end_date, quantity, is_active, created_by_user_id) VALUES
     ('Giảm 20% tháng 12', 'SALE20', 20, '2025-12-01', '2025-12-31', 50, TRUE, 1),
     ('Tặng 10% khách hàng mới', 'NEW10', 10, '2025-01-01', '2025-12-31', 100, TRUE, 1);
 
@@ -129,17 +128,16 @@ VALUES
 -- 7️⃣ PROMOTION LOGS
 -- ========================
 CREATE TABLE promotion_logs (
-                                id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                promotion_id BIGINT NOT NULL,
-                                actor_user_id BIGINT NOT NULL,
-                                action VARCHAR(50) NOT NULL,
-                                log_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                                FOREIGN KEY (promotion_id) REFERENCES promotions(id),
-                                FOREIGN KEY (actor_user_id) REFERENCES users(id)
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    promotion_id BIGINT NOT NULL,
+    actor_user_id BIGINT NOT NULL,
+    action VARCHAR(50) NOT NULL,
+    log_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (promotion_id) REFERENCES promotions(id),
+    FOREIGN KEY (actor_user_id) REFERENCES users(id)
 );
 
-INSERT INTO promotion_logs (promotion_id, actor_user_id, action)
-VALUES
+INSERT INTO promotion_logs (promotion_id, actor_user_id, action) VALUES
     (1, 1, 'CREATE'),
     (2, 1, 'CREATE');
 
@@ -147,96 +145,94 @@ VALUES
 -- 8️⃣ ORDERS
 -- ========================
 CREATE TABLE orders (
-                        id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                        user_id BIGINT NOT NULL,
-                        order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                        total DOUBLE NOT NULL,
-                        applied_promotion_id BIGINT NULL,
-                        status_order ENUM('PENDING','PROCESSING','SHIPPING','COMPLETED','CANCELLED') DEFAULT 'PENDING',
-                        address VARCHAR(255),
-                        note VARCHAR(500),
-                        FOREIGN KEY (user_id) REFERENCES users(id),
-                        FOREIGN KEY (applied_promotion_id) REFERENCES promotions(id)
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    total DOUBLE NOT NULL,
+    applied_promotion_id BIGINT NULL,
+    status_order ENUM('PENDING','PROCESSING','SHIPPING','COMPLETED','CANCELLED') DEFAULT 'PENDING',
+    address VARCHAR(255),
+    note VARCHAR(500),
+    FOREIGN KEY (user_id) REFERENCES users(id),
+    FOREIGN KEY (applied_promotion_id) REFERENCES promotions(id)
 );
 
-INSERT INTO orders (user_id, total, status_order, address, note)
-VALUES (2, 770000, 'COMPLETED', 'TP. Hồ Chí Minh', 'Giao trong ngày');
+INSERT INTO orders (user_id, total, status_order, address, note) VALUES
+    (2, 770000, 'COMPLETED', 'TP. Hồ Chí Minh', 'Giao trong ngày');
+
+-- Lấy ID đơn hàng vừa tạo
+SET @last_order_id = LAST_INSERT_ID();
 
 -- ========================
 -- 9️⃣ ORDER ITEMS
 -- ========================
 CREATE TABLE order_items (
-                             id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                             order_id BIGINT NOT NULL,
-                             book_id BIGINT NOT NULL,
-                             quantity INT NOT NULL,
-                             price DOUBLE NOT NULL,
-                             FOREIGN KEY (order_id) REFERENCES orders(id),
-                             FOREIGN KEY (book_id) REFERENCES books(id)
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL,
+    book_id BIGINT NOT NULL,
+    quantity INT NOT NULL,
+    price DOUBLE NOT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id),
+    FOREIGN KEY (book_id) REFERENCES books(id)
 );
 
-INSERT INTO order_items (order_id, book_id, quantity, price)
-VALUES
-    (LAST_INSERT_ID(), 1, 1, 350000),
-    (LAST_INSERT_ID(), 2, 1, 420000);
+INSERT INTO order_items (order_id, book_id, quantity, price) VALUES
+    (@last_order_id, 1, 1, 350000),
+    (@last_order_id, 2, 1, 420000);
 
 -- ========================
 -- 🔟 PAYMENTS
 -- ========================
 CREATE TABLE payments (
-                          id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                          order_id BIGINT NOT NULL UNIQUE,
-                          method ENUM('CASH', 'VNPAY') DEFAULT 'CASH',
-                          amount DOUBLE NOT NULL,
-                          payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                          status_payment ENUM('PENDING','SUCCESS','FAILED') DEFAULT 'PENDING',
-                          vnp_txn_ref VARCHAR(100) NULL,
-                          vnp_transaction_no VARCHAR(100) NULL,
-                          vnp_response_code VARCHAR(20) NULL,
-                          vnp_bank_code VARCHAR(50) NULL,
-                          vnp_pay_date VARCHAR(20) NULL,
-                          raw_response TEXT NULL,
-                          FOREIGN KEY (order_id) REFERENCES orders(id)
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    order_id BIGINT NOT NULL UNIQUE,
+    method ENUM('CASH', 'VNPAY') DEFAULT 'CASH',
+    amount DOUBLE NOT NULL,
+    payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+    status_payment ENUM('PENDING','SUCCESS','FAILED') DEFAULT 'PENDING',
+    vnp_txn_ref VARCHAR(100) NULL,
+    vnp_transaction_no VARCHAR(100) NULL,
+    vnp_response_code VARCHAR(20) NULL,
+    vnp_bank_code VARCHAR(50) NULL,
+    vnp_pay_date VARCHAR(20) NULL,
+    raw_response MEDIUMTEXT NULL,
+    FOREIGN KEY (order_id) REFERENCES orders(id)
 );
 
--- Lấy ID đơn hàng vừa tạo
-SET @last_order_id = LAST_INSERT_ID();
-
-INSERT INTO payments (order_id, method, amount, status_payment)
-VALUES (@last_order_id, 'CASH', 770000, 'SUCCESS');
+INSERT INTO payments (order_id, method, amount, status_payment) VALUES
+    (@last_order_id, 'CASH', 770000, 'SUCCESS');
 
 -- ========================
 -- 1️⃣1️⃣ REVIEWS
 -- ========================
 CREATE TABLE reviews (
-                         id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                         book_id BIGINT NOT NULL,
-                         user_id BIGINT NOT NULL,
-                         rating INT CHECK (rating BETWEEN 1 AND 5),
-                         comment VARCHAR(1000),
-                         created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                         FOREIGN KEY (book_id) REFERENCES books(id),
-                         FOREIGN KEY (user_id) REFERENCES users(id)
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    book_id BIGINT NOT NULL,
+    user_id BIGINT NOT NULL,
+    rating INT CHECK (rating BETWEEN 1 AND 5),
+    comment VARCHAR(1000),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (book_id) REFERENCES books(id),
+    FOREIGN KEY (user_id) REFERENCES users(id)
 );
 
 INSERT INTO reviews (book_id, user_id, rating, comment) VALUES
-                                                            (1, 2, 5, 'Sách cực hay, đáng đọc!'),
-                                                            (2, 2, 4, 'Rất bổ ích cho lập trình viên.'),
-                                                            (4, 2, 5, 'Truyền cảm hứng tài chính.');
+    (1, 2, 5, 'Sách cực hay, đáng đọc!'),
+    (2, 2, 4, 'Rất bổ ích cho lập trình viên.'),
+    (4, 2, 5, 'Truyền cảm hứng tài chính.');
 
 -- ========================
 -- 1️⃣2️⃣ BOOK EMBEDDINGS
 -- ========================
 CREATE TABLE book_embeddings (
-                                 id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                 book_id BIGINT NOT NULL UNIQUE,
-                                 embedding_json TEXT,
-                                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                                 FOREIGN KEY (book_id) REFERENCES books(id)
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    book_id BIGINT NOT NULL UNIQUE,
+    embedding_json MEDIUMTEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (book_id) REFERENCES books(id)
 );
 
-INSERT INTO book_embeddings (book_id, embedding_json)
-VALUES
+INSERT INTO book_embeddings (book_id, embedding_json) VALUES
     (1, '[0.12, 0.45, 0.33, 0.87, 0.56, 0.22]'),
     (2, '[0.77, 0.42, 0.11, 0.93, 0.21, 0.34]');
 
@@ -244,19 +240,18 @@ VALUES
 -- 1️⃣3️⃣ NOTIFICATIONS
 -- ========================
 CREATE TABLE notifications (
-                               id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                               title VARCHAR(255) NOT NULL,
-                               content TEXT,
-                               created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-                               is_read BOOLEAN DEFAULT FALSE,
-                               sender_id BIGINT NULL,
-                               receiver_id BIGINT NOT NULL,
-                               FOREIGN KEY (sender_id) REFERENCES users(id),
-                               FOREIGN KEY (receiver_id) REFERENCES users(id)
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_read BOOLEAN DEFAULT FALSE,
+    sender_id BIGINT NULL,
+    receiver_id BIGINT NOT NULL,
+    FOREIGN KEY (sender_id) REFERENCES users(id),
+    FOREIGN KEY (receiver_id) REFERENCES users(id)
 );
 
-INSERT INTO notifications (title, content, sender_id, receiver_id, created_at, is_read)
-VALUES
+INSERT INTO notifications (title, content, sender_id, receiver_id, created_at, is_read) VALUES
     ('Khuyến mãi tháng 12', 'Giảm giá toàn bộ sách CNTT đến 30%', 1, 2, NOW(), FALSE),
     ('Đặt hàng thành công', 'Đơn hàng #1 đã được tạo thành công!', NULL, 2, NOW(), FALSE),
     ('Đơn hàng đang xử lý', 'Đơn hàng #1 của bạn đang được xử lý.', 1, 2, NOW(), FALSE),
@@ -265,26 +260,34 @@ VALUES
     ('Cập nhật tài khoản', 'Thông tin tài khoản của bạn đã được cập nhật.', 1, 2, NOW(), FALSE);
 
 -- ========================
--- TẠO ĐƠN HÀNG THỨ 2
+-- 1️⃣4️⃣ FAVORITE BOOKS
 -- ========================
-INSERT INTO orders (user_id, total, status_order, address, note)
-VALUES (2, 350000, 'COMPLETED', 'TP. Hồ Chí Minh', 'Đơn hàng VNPAY');
+CREATE TABLE favorite_books (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    user_id BIGINT NOT NULL,
+    book_id BIGINT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_user_book (user_id, book_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (book_id) REFERENCES books(id) ON DELETE CASCADE
+);
 
--- Lấy ID đơn hàng vừa tạo
+INSERT INTO favorite_books (user_id, book_id, created_at) VALUES
+    (2, 1, NOW()),
+    (2, 2, NOW()),
+    (2, 3, NOW());
+
+-- ========================
+-- 1️⃣5️⃣ ĐƠN HÀNG THỨ 2 (VNPAY)
+-- ========================
+INSERT INTO orders (user_id, total, status_order, address, note) VALUES
+    (2, 350000, 'COMPLETED', 'TP. Hồ Chí Minh', 'Đơn hàng VNPAY');
+
 SET @last_order_id_vnpay = LAST_INSERT_ID();
 
--- ========================
--- ORDER ITEMS cho đơn hàng thứ 2
--- ========================
-INSERT INTO order_items (order_id, book_id, quantity, price)
-VALUES
+INSERT INTO order_items (order_id, book_id, quantity, price) VALUES
     (@last_order_id_vnpay, 1, 1, 350000);
 
--- ========================
--- PAYMENT VNPAY
--- ========================
-INSERT INTO payments
-(order_id, method, amount, status_payment, vnp_txn_ref, vnp_transaction_no, vnp_response_code, vnp_bank_code, vnp_pay_date)
-VALUES
+INSERT INTO payments (order_id, method, amount, status_payment, vnp_txn_ref, vnp_transaction_no, vnp_response_code, vnp_bank_code, vnp_pay_date) VALUES
     (@last_order_id_vnpay, 'VNPAY', 350000, 'SUCCESS',
      'VNP123456', '987654321', '00', 'NCB', '20250101123045');

@@ -94,6 +94,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/orders/**").authenticated()
                         .requestMatchers("/api/payments/**").authenticated()
                         .requestMatchers("/api/cart/**").authenticated()
+                        .requestMatchers("/api/favorites/**").authenticated()
 
                         // Reviews (POST/PUT/DELETE require login)
                         .requestMatchers(HttpMethod.POST, "/api/reviews/**").authenticated()
