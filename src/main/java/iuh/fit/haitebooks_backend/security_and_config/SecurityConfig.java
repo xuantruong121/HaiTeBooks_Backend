@@ -64,6 +64,15 @@ public class SecurityConfig {
                         // 🔥 Public validate promotion
                         .requestMatchers(HttpMethod.GET, "/api/promotions/validate/**").permitAll()
 
+                        // 🔥 VNPay endpoints - PUBLIC (VNPay server needs to call IPN)
+                        .requestMatchers("/api/v1/payment/vnpay/ipn").permitAll()
+                        .requestMatchers("/api/v1/payment/vnpay/return").permitAll()
+                        // VNPay create payment - authenticated
+                        .requestMatchers("/api/v1/payment/create").authenticated()
+
+                        // Statistics - ADMIN only
+                        .requestMatchers("/api/statistics/**").hasRole("ADMIN")
+
                         // WebSocket
                         .requestMatchers("/ws/**").permitAll()
 
@@ -125,6 +134,9 @@ public class SecurityConfig {
                         // Users
                         .requestMatchers("/api/users/all").hasRole("ADMIN")
                         .requestMatchers("/api/users/{id}").hasRole("ADMIN")
+
+                        // AI - POST requires ADMIN
+                        .requestMatchers(HttpMethod.POST, "/api/ai/**").hasRole("ADMIN")
 
                         /* ================= DEFAULT ================= */
                         .anyRequest().authenticated()

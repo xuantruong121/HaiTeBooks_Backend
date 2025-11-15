@@ -10,7 +10,6 @@ CREATE TABLE roles (
                        name VARCHAR(50) NOT NULL UNIQUE
 );
 
--- ✔ Chỉ còn ADMIN & USER
 INSERT INTO roles (name) VALUES ('ADMIN'), ('USER');
 
 -- ========================
@@ -33,7 +32,6 @@ INSERT INTO users (username, password, email, full_name, address, role_id)
 VALUES
     ('admin', '$2a$10$GB09.wpAwHAP09fsQvN/LON7RHE/jkGWExDuWuBuD1OYCuOSOxfuW',
      'admin@bookstore.com', 'Administrator', 'Hà Nội', 1),
-
     ('user1', '$2a$10$6Tp/gz0GSxWd/vvsLQzcYOhRXVpyrhKj9qCzPKTjmZZqgdR18evxi',
      'user1@gmail.com', 'Nguyen Van A', 'TP. Hồ Chí Minh', 2);
 
@@ -74,19 +72,15 @@ INSERT INTO books
                                                                                 ('Clean Code', 'Robert C. Martin', '9780132350884', 350000, 20,
                                                                                  'A handbook of agile software craftsmanship.',
                                                                                  'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848267/cleancode_kwld08.png', 1),
-
                                                                                 ('The Pragmatic Programmer', 'Andrew Hunt', '9780201616224', 420000, 15,
                                                                                  'Journey to mastery in software development.',
                                                                                  'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848267/pragmatic_nmcybl.png', 1),
-
                                                                                 ('Design Patterns', 'Erich Gamma', '9780201633610', 480000, 10,
                                                                                  'Elements of reusable object-oriented software.',
                                                                                  'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/designpatterns_bjpzpe.jpg', 1),
-
                                                                                 ('Rich Dad Poor Dad', 'Robert Kiyosaki', '9780446677455', 250000, 30,
                                                                                  'What the rich teach their kids about money.',
                                                                                  'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/richdad_fnvbwv.png', 2),
-
                                                                                 ('Harry Potter and the Sorcerer''s Stone', 'J.K. Rowling', '9780747532699', 320000, 50,
                                                                                  'Fantasy novel for all ages.',
                                                                                  'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/harrypotter_kwpopd.webp', 3);
@@ -120,10 +114,8 @@ CREATE TABLE promotions (
                             end_date DATE NOT NULL,
                             quantity INT NOT NULL,
                             is_active BOOLEAN DEFAULT TRUE,
-
                             created_by_user_id BIGINT,
                             approved_by_user_id BIGINT,
-
                             FOREIGN KEY (created_by_user_id) REFERENCES users(id),
                             FOREIGN KEY (approved_by_user_id) REFERENCES users(id)
 );
@@ -131,7 +123,6 @@ CREATE TABLE promotions (
 INSERT INTO promotions (name, code, discount_percent, start_date, end_date, quantity, is_active, created_by_user_id)
 VALUES
     ('Giảm 20% tháng 12', 'SALE20', 20, '2025-12-01', '2025-12-31', 50, TRUE, 1),
-
     ('Tặng 10% khách hàng mới', 'NEW10', 10, '2025-01-01', '2025-12-31', 100, TRUE, 1);
 
 -- ========================
@@ -143,7 +134,6 @@ CREATE TABLE promotion_logs (
                                 actor_user_id BIGINT NOT NULL,
                                 action VARCHAR(50) NOT NULL,
                                 log_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-
                                 FOREIGN KEY (promotion_id) REFERENCES promotions(id),
                                 FOREIGN KEY (actor_user_id) REFERENCES users(id)
 );
@@ -161,13 +151,10 @@ CREATE TABLE orders (
                         user_id BIGINT NOT NULL,
                         order_date DATETIME DEFAULT CURRENT_TIMESTAMP,
                         total DOUBLE NOT NULL,
-
                         applied_promotion_id BIGINT NULL,
-
                         status_order ENUM('PENDING','PROCESSING','SHIPPING','COMPLETED','CANCELLED') DEFAULT 'PENDING',
                         address VARCHAR(255),
                         note VARCHAR(500),
-
                         FOREIGN KEY (user_id) REFERENCES users(id),
                         FOREIGN KEY (applied_promotion_id) REFERENCES promotions(id)
 );
@@ -188,12 +175,38 @@ CREATE TABLE order_items (
                              FOREIGN KEY (book_id) REFERENCES books(id)
 );
 
-INSERT INTO order_items (order_id, book_id, quantity, price) VALUES
-                                                                 (1, 1, 1, 350000),
-                                                                 (1, 2, 1, 420000);
+INSERT INTO order_items (order_id, book_id, quantity, price)
+VALUES
+    (LAST_INSERT_ID(), 1, 1, 350000),
+    (LAST_INSERT_ID(), 2, 1, 420000);
 
 -- ========================
--- 🔟 REVIEWS
+-- 🔟 PAYMENTS
+-- ========================
+CREATE TABLE payments (
+                          id BIGINT AUTO_INCREMENT PRIMARY KEY,
+                          order_id BIGINT NOT NULL UNIQUE,
+                          method ENUM('CASH', 'VNPAY') DEFAULT 'CASH',
+                          amount DOUBLE NOT NULL,
+                          payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+                          status_payment ENUM('PENDING','SUCCESS','FAILED') DEFAULT 'PENDING',
+                          vnp_txn_ref VARCHAR(100) NULL,
+                          vnp_transaction_no VARCHAR(100) NULL,
+                          vnp_response_code VARCHAR(20) NULL,
+                          vnp_bank_code VARCHAR(50) NULL,
+                          vnp_pay_date VARCHAR(20) NULL,
+                          raw_response TEXT NULL,
+                          FOREIGN KEY (order_id) REFERENCES orders(id)
+);
+
+-- Lấy ID đơn hàng vừa tạo
+SET @last_order_id = LAST_INSERT_ID();
+
+INSERT INTO payments (order_id, method, amount, status_payment)
+VALUES (@last_order_id, 'CASH', 770000, 'SUCCESS');
+
+-- ========================
+-- 1️⃣1️⃣ REVIEWS
 -- ========================
 CREATE TABLE reviews (
                          id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -210,22 +223,6 @@ INSERT INTO reviews (book_id, user_id, rating, comment) VALUES
                                                             (1, 2, 5, 'Sách cực hay, đáng đọc!'),
                                                             (2, 2, 4, 'Rất bổ ích cho lập trình viên.'),
                                                             (4, 2, 5, 'Truyền cảm hứng tài chính.');
-
--- ========================
--- 1️⃣1️⃣ PAYMENTS
--- ========================
-CREATE TABLE payments (
-                          id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                          order_id BIGINT NOT NULL UNIQUE,
-                          method ENUM('CASH','CREDIT_CARD','MOMO','ZALO_PAY') DEFAULT 'CASH',
-                          amount DOUBLE NOT NULL,
-                          payment_date DATETIME DEFAULT CURRENT_TIMESTAMP,
-                          status_payment ENUM('PENDING','SUCCESS','FAILED') DEFAULT 'SUCCESS',
-                          FOREIGN KEY (order_id) REFERENCES orders(id)
-);
-
-INSERT INTO payments (order_id, method, amount, status_payment)
-VALUES (1, 'MOMO', 770000, 'SUCCESS');
 
 -- ========================
 -- 1️⃣2️⃣ BOOK EMBEDDINGS
@@ -266,3 +263,28 @@ VALUES
     ('Đơn hàng đang vận chuyển', 'Đơn hàng #1 đang được giao.', 1, 2, NOW(), FALSE),
     ('Đơn hàng đã hoàn tất', 'Hãy đánh giá sản phẩm nhé!', 1, 2, NOW(), TRUE),
     ('Cập nhật tài khoản', 'Thông tin tài khoản của bạn đã được cập nhật.', 1, 2, NOW(), FALSE);
+
+-- ========================
+-- TẠO ĐƠN HÀNG THỨ 2
+-- ========================
+INSERT INTO orders (user_id, total, status_order, address, note)
+VALUES (2, 350000, 'COMPLETED', 'TP. Hồ Chí Minh', 'Đơn hàng VNPAY');
+
+-- Lấy ID đơn hàng vừa tạo
+SET @last_order_id_vnpay = LAST_INSERT_ID();
+
+-- ========================
+-- ORDER ITEMS cho đơn hàng thứ 2
+-- ========================
+INSERT INTO order_items (order_id, book_id, quantity, price)
+VALUES
+    (@last_order_id_vnpay, 1, 1, 350000);
+
+-- ========================
+-- PAYMENT VNPAY
+-- ========================
+INSERT INTO payments
+(order_id, method, amount, status_payment, vnp_txn_ref, vnp_transaction_no, vnp_response_code, vnp_bank_code, vnp_pay_date)
+VALUES
+    (@last_order_id_vnpay, 'VNPAY', 350000, 'SUCCESS',
+     'VNP123456', '987654321', '00', 'NCB', '20250101123045');

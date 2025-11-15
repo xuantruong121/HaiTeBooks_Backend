@@ -35,6 +35,7 @@ public class Order {
 
     // PENDING, PROCESSING, COMPLETED, CANCELLED, SHIPPING
     @Enumerated(EnumType.STRING)
+    @Column(name = "order_status")
     private Status_Order status;
 
     // 🏠 Địa chỉ giao hàng

@@ -6,7 +6,6 @@ import lombok.Data;
 
 @Data
 public class PaymentRequest {
-
     @NotNull(message = "Order ID is required")
     private Long orderId;
 
@@ -17,5 +16,8 @@ public class PaymentRequest {
     private double amount;
 
     @NotNull(message = "Payment method is required")
-    private String method; // e.g., CASH, CREDIT_CARD, MOMO, ZALO_PAY
+    private String method; // e.g., VNPay
+
+    @NotNull(message = "Order info is required")
+    private String orderInfo;
 }
