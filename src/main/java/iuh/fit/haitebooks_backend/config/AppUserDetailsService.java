@@ -1,4 +1,4 @@
-package iuh.fit.haitebooks_backend.security_and_config;
+package iuh.fit.haitebooks_backend.config;
 
 import iuh.fit.haitebooks_backend.repository.UserRepository;
 import org.springframework.security.core.userdetails.*;

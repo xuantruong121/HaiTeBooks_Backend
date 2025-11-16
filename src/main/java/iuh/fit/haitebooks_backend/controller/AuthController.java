@@ -5,7 +5,7 @@ import iuh.fit.haitebooks_backend.dtos.request.RegisterRequest;
 import iuh.fit.haitebooks_backend.dtos.response.AuthResponse;
 import iuh.fit.haitebooks_backend.model.User;
 import iuh.fit.haitebooks_backend.service.UserService;
-import iuh.fit.haitebooks_backend.security_and_config.JwtUtil;
+import iuh.fit.haitebooks_backend.config.JwtUtil;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
