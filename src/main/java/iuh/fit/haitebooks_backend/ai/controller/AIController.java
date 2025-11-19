@@ -17,7 +17,8 @@ public class AIController {
     private final BookRecommendationService bookRecommendationService;
     private final BookEmbeddingGenerator embeddingGenerator;
 
-    public AIController(BookSearchService bookSearchService, BookRecommendationService bookRecommendationService, BookEmbeddingGenerator embeddingGenerator) {
+    public AIController(BookSearchService bookSearchService, BookRecommendationService bookRecommendationService,
+                        BookEmbeddingGenerator embeddingGenerator) {
         this.bookSearchService = bookSearchService;
         this.bookRecommendationService = bookRecommendationService;
         this.embeddingGenerator = embeddingGenerator;
