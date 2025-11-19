@@ -16,10 +16,12 @@ public class Order_Item {
 
     //Mapping to Order and Book with quantity and price
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "order_id", nullable = false)
     @JsonBackReference
     private Order order;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "book_id", nullable = false)
     private Book book;
 
     @Column(nullable = false)

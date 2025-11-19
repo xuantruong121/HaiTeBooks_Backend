@@ -35,7 +35,7 @@ public class Order {
 
     // PENDING, PROCESSING, COMPLETED, CANCELLED, SHIPPING
     @Enumerated(EnumType.STRING)
-    @Column(name = "order_status")
+    @Column(name = "status_order")
     private Status_Order status;
 
     // 🏠 Địa chỉ giao hàng
@@ -57,6 +57,6 @@ public class Order {
     private Payment payment;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "promotion_id")
+    @JoinColumn(name = "applied_promotion_id", nullable = true)
     private Promotion appliedPromotion;
 }

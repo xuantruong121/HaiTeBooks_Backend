@@ -16,7 +16,7 @@ public class ReviewMapper {
         review.setBook(book);
         review.setRating(request.getRating());
         review.setComment(request.getComment());
-        review.setCreated_at(LocalDateTime.now());
+        review.setCreatedAt(LocalDateTime.now());
         return review;
     }
 
@@ -29,7 +29,7 @@ public class ReviewMapper {
                 review.getBook() != null ? review.getBook().getId() : null,
                 review.getRating(),
                 review.getComment(),
-                review.getCreated_at()
+                review.getCreatedAt()
         );
     }
 }
