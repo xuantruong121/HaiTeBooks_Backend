@@ -1,19 +1,33 @@
 FROM maven:3-openjdk-17 AS build
 WORKDIR /app
 
-COPY . .
-RUN mvn clean package -DskipTests && rm -rf /root/.m2/repository
+# Copy pom.xml first for better caching
+COPY pom.xml .
+COPY .mvn .mvn
+COPY mvnw .
+COPY mvnw.cmd .
+
+# Download dependencies (cached layer)
+RUN mvn dependency:go-offline -B || true
+
+# Copy source code
+COPY src ./src
+
+# Build application
+RUN mvn clean package -DskipTests
+
+# Verify WAR file was created
+RUN ls -la /app/target/*.war || (echo "WAR file not found!" && ls -la /app/target/ && exit 1)
 
 # Run stage
-
-FROM openjdk:17-jdk-slim
+FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
-COPY -- from=build /app/target/HaiTeBooks_Backend-0.0.1-SNAPSHOT.war HaiTeBooks_Backend.war
+# Copy WAR file from build stage
+COPY --from=build /app/target/*.war HaiTeBooks_Backend.war
 
 RUN mkdir -p /app/uploads
 VOLUME ["/app/uploads"]
-I
 
 EXPOSE 8080
 
