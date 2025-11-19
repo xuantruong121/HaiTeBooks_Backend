@@ -10,6 +10,12 @@ public class BookMapper {
     public static BookResponse toBookResponse(Book book) {
         if (book == null) return null;
 
+        // Lấy category name - đảm bảo được gọi trong transaction
+        String categoryName = null;
+        if (book.getCategory() != null) {
+            categoryName = book.getCategory().getName();
+        }
+
         return new BookResponse(
                 book.getId(),
                 book.getTitle(),
@@ -19,7 +25,7 @@ public class BookMapper {
                 book.getDescription(),
                 book.getImageUrl(),
                 book.getBarcode(), // chỉ trả chuỗi barcode
-                book.getCategory() != null ? book.getCategory().getName() : null
+                categoryName
         );
     }
 

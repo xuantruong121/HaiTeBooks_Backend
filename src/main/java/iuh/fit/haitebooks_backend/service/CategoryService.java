@@ -6,6 +6,7 @@ import iuh.fit.haitebooks_backend.mapper.CategoryMapper;
 import iuh.fit.haitebooks_backend.model.BookCategory;
 import iuh.fit.haitebooks_backend.repository.CategoryRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -20,6 +21,7 @@ public class CategoryService {
     }
 
     // ✅ Lấy tất cả category
+    @Transactional(readOnly = true)
     public List<CategoryResponse> getAllCategories() {
         return categoryRepository.findAll()
                 .stream()
@@ -28,6 +30,7 @@ public class CategoryService {
     }
 
     // ✅ Tạo mới — kiểm tra trùng tên
+    @Transactional
     public BookCategory createCategory(CategoryRequest request) {
         if (categoryRepository.existsByNameIgnoreCase(request.getName())) {
             throw new RuntimeException("Category name already exists: " + request.getName());
@@ -38,12 +41,14 @@ public class CategoryService {
     }
 
     // ✅ Lấy theo ID
+    @Transactional(readOnly = true)
     public BookCategory getCategoryById(Long id) {
         return categoryRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Category not found with id " + id));
     }
 
     // ✅ Cập nhật — kiểm tra trùng tên (trừ chính nó)
+    @Transactional
     public BookCategory updateCategory(Long id, CategoryRequest request) {
         BookCategory category = getCategoryById(id);
 
@@ -58,6 +63,7 @@ public class CategoryService {
     }
 
     // ✅ Xóa
+    @Transactional
     public void deleteCategory(Long id) {
         if (!categoryRepository.existsById(id)) {
             throw new RuntimeException("Category not found with id " + id);

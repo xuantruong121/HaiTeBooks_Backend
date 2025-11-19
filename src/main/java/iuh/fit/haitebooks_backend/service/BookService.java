@@ -1,6 +1,7 @@
 package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.BookRequest;
+import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
 import iuh.fit.haitebooks_backend.mapper.BookMapper;
 import iuh.fit.haitebooks_backend.model.Book;
 import iuh.fit.haitebooks_backend.model.BookCategory;
@@ -8,9 +9,11 @@ import iuh.fit.haitebooks_backend.repository.BookRepository;
 import iuh.fit.haitebooks_backend.repository.CategoryRepository;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Collectors;
 
 @Service
 public class BookService {
@@ -23,23 +26,57 @@ public class BookService {
         this.categoryRepository = categoryRepository;
     }
 
-    public List<Book> getAllBooks() {
-        return bookRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<BookResponse> getAllBooks() {
+        List<Book> books = bookRepository.findAll();
+        // Map trong transaction để đảm bảo lazy relationships được load
+        return books.stream()
+                .map(book -> {
+                    // Đảm bảo category được load trong transaction
+                    if (book.getCategory() != null) {
+                        book.getCategory().getName();
+                    }
+                    return BookMapper.toBookResponse(book);
+                })
+                .collect(Collectors.toList());
     }
 
-    public Page<Book> getBooksWithPagination(String keyword, int page, int size) {
+    @Transactional(readOnly = true)
+    public Page<BookResponse> getBooksWithPagination(String keyword, int page, int size) {
         Pageable pageable = PageRequest.of(page, size, Sort.by("id").descending());
-        return (keyword != null && !keyword.isBlank())
+        Page<Book> booksPage = (keyword != null && !keyword.isBlank())
                 ? bookRepository.findByTitleContainingIgnoreCase(keyword, pageable)
                 : bookRepository.findAll(pageable);
+        
+        // Map trong transaction để đảm bảo lazy relationships được load
+        List<BookResponse> responses = booksPage.getContent().stream()
+                .map(book -> {
+                    // Đảm bảo category được load trong transaction
+                    if (book.getCategory() != null) {
+                        book.getCategory().getName();
+                    }
+                    return BookMapper.toBookResponse(book);
+                })
+                .collect(Collectors.toList());
+        
+        return new PageImpl<>(responses, pageable, booksPage.getTotalElements());
     }
 
-    public Book findByBarcode(String barcode) {
-        return bookRepository.findByBarcode(barcode).orElse(null);
+    @Transactional(readOnly = true)
+    public BookResponse findByBarcode(String barcode) {
+        Book book = bookRepository.findByBarcode(barcode).orElse(null);
+        if (book == null) return null;
+        
+        // Đảm bảo category được load trong transaction
+        if (book.getCategory() != null) {
+            book.getCategory().getName();
+        }
+        return BookMapper.toBookResponse(book);
     }
 
     // ✅ Thêm mới sách và tự sinh barcode hợp lệ
-    public Book createBook(BookRequest request) {
+    @Transactional
+    public BookResponse createBook(BookRequest request) {
         BookCategory category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found with id " + request.getCategoryId()));
 
@@ -49,23 +86,45 @@ public class BookService {
         String barcode = generateUniqueEAN13Barcode();
         book.setBarcode(barcode);
 
-        return bookRepository.save(book);
+        book = bookRepository.save(book);
+        
+        // Đảm bảo category được load trong transaction
+        if (book.getCategory() != null) {
+            book.getCategory().getName();
+        }
+        return BookMapper.toBookResponse(book);
     }
 
-    public Book getBookById(Long id) {
-        return bookRepository.findById(id)
+    @Transactional(readOnly = true)
+    public BookResponse getBookById(Long id) {
+        Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Book not found with id " + id));
+        
+        // Đảm bảo category được load trong transaction
+        if (book.getCategory() != null) {
+            book.getCategory().getName();
+        }
+        return BookMapper.toBookResponse(book);
     }
 
-    public Book updateBook(Long id, BookRequest request) {
-        Book book = getBookById(id);
+    @Transactional
+    public BookResponse updateBook(Long id, BookRequest request) {
+        Book book = bookRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Book not found with id " + id));
         BookCategory category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("Category not found with id " + request.getCategoryId()));
 
         BookMapper.updateBookFromRequest(book, request, category);
-        return bookRepository.save(book);
+        book = bookRepository.save(book);
+        
+        // Đảm bảo category được load trong transaction
+        if (book.getCategory() != null) {
+            book.getCategory().getName();
+        }
+        return BookMapper.toBookResponse(book);
     }
 
+    @Transactional
     public void deleteBook(Long id) {
         if (!bookRepository.existsById(id)) {
             throw new RuntimeException("Book not found with id " + id);

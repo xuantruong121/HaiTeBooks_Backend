@@ -2,8 +2,6 @@ package iuh.fit.haitebooks_backend.controller;
 
 import iuh.fit.haitebooks_backend.dtos.request.BookRequest;
 import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
-import iuh.fit.haitebooks_backend.mapper.BookMapper;
-import iuh.fit.haitebooks_backend.model.Book;
 import iuh.fit.haitebooks_backend.service.BookService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
@@ -26,8 +24,7 @@ public class BookController {
     // ✅ Lấy tất cả (không phân trang)
     @GetMapping
     public ResponseEntity<List<BookResponse>> getAllBooks() {
-        List<BookResponse> responses = bookService.getAllBooks()
-                .stream().map(BookMapper::toBookResponse).toList();
+        List<BookResponse> responses = bookService.getAllBooks();
         return ResponseEntity.ok(responses);
     }
 
@@ -38,32 +35,31 @@ public class BookController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
-        var booksPage = bookService.getBooksWithPagination(keyword, page, size)
-                .map(BookMapper::toBookResponse);
+        Page<BookResponse> booksPage = bookService.getBooksWithPagination(keyword, page, size);
         return ResponseEntity.ok(booksPage);
     }
 
     // ✅ Lấy sách bằng barcode (VD: quét barcode)
     @GetMapping("/barcode/{code}")
     public ResponseEntity<BookResponse> getBookByBarcode(@PathVariable String code) {
-        Book book = bookService.findByBarcode(code);
+        BookResponse book = bookService.findByBarcode(code);
         return (book != null)
-                ? ResponseEntity.ok(BookMapper.toBookResponse(book))
+                ? ResponseEntity.ok(book)
                 : ResponseEntity.notFound().build();
     }
 
     // ✅ Thêm sách mới (tự sinh barcode nếu chưa có)
     @PostMapping
     public ResponseEntity<BookResponse> createBook(@Valid @RequestBody BookRequest request) {
-        Book created = bookService.createBook(request);
-        return ResponseEntity.ok(BookMapper.toBookResponse(created));
+        BookResponse created = bookService.createBook(request);
+        return ResponseEntity.ok(created);
     }
 
     // ✅ Lấy theo ID
     @GetMapping("/{id}")
     public ResponseEntity<BookResponse> getBookById(@PathVariable Long id) {
-        Book book = bookService.getBookById(id);
-        return ResponseEntity.ok(BookMapper.toBookResponse(book));
+        BookResponse book = bookService.getBookById(id);
+        return ResponseEntity.ok(book);
     }
 
     // ✅ Cập nhật sách (không thay đổi barcode)
@@ -72,8 +68,8 @@ public class BookController {
             @PathVariable Long id,
             @Valid @RequestBody BookRequest request
     ) {
-        Book updated = bookService.updateBook(id, request);
-        return ResponseEntity.ok(BookMapper.toBookResponse(updated));
+        BookResponse updated = bookService.updateBook(id, request);
+        return ResponseEntity.ok(updated);
     }
 
     // ✅ Xóa sách
