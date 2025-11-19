@@ -10,11 +10,18 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 public class HaiTeBooksBackendApplication {
 
     public static void main(String[] args) {
-        // ✅ Nạp biến môi trường từ file .env
-        Dotenv dotenv = Dotenv.load();
-        dotenv.entries().forEach(entry ->
-                System.setProperty(entry.getKey(), entry.getValue())
-        );
+        // ✅ Nạp biến môi trường từ file .env (optional - fallback về env vars)
+        try {
+            Dotenv dotenv = Dotenv.configure()
+                    .ignoreIfMissing()  // ✅ Không throw exception nếu không có file .env
+                    .load();
+            dotenv.entries().forEach(entry ->
+                    System.setProperty(entry.getKey(), entry.getValue())
+            );
+        } catch (Exception e) {
+            // Nếu không có file .env, sử dụng environment variables từ hệ thống
+            System.out.println("⚠️ No .env file found, using system environment variables");
+        }
 
         SpringApplication.run(HaiTeBooksBackendApplication.class, args);
 

@@ -16,9 +16,10 @@ public class AIConfig {
 
     @Bean
     public String cohereApiKey(Dotenv dotenv) {
-        String key = dotenv.get("COHERE_API_KEY");
+        // ✅ Ưu tiên lấy từ .env, nếu không có thì lấy từ environment variables
+        String key = dotenv.get("COHERE_API_KEY", System.getenv("COHERE_API_KEY"));
         if (key == null || key.isEmpty()) {
-            throw new IllegalStateException("❌ COHERE_API_KEY not found in .env");
+            throw new IllegalStateException("❌ COHERE_API_KEY not found in .env or environment variables");
         }
         return key;
     }
@@ -26,6 +27,9 @@ public class AIConfig {
     @Bean
     public String cohereEmbeddingModel(Dotenv dotenv) {
         // Model đa ngôn ngữ mạnh nhất hiện tại
-        return dotenv.get("COHERE_EMBEDDING_MODEL", "embed-multilingual-v3.0");
+        return dotenv.get("COHERE_EMBEDDING_MODEL", 
+                System.getenv("COHERE_EMBEDDING_MODEL") != null 
+                    ? System.getenv("COHERE_EMBEDDING_MODEL") 
+                    : "embed-multilingual-v3.0");
     }
 }
