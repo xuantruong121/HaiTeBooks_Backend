@@ -2,6 +2,8 @@ package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.NotificationRequest;
 import iuh.fit.haitebooks_backend.dtos.request.OrderRequest;
+import iuh.fit.haitebooks_backend.dtos.response.OrderResponse;
+import iuh.fit.haitebooks_backend.mapper.OrderMapper;
 import iuh.fit.haitebooks_backend.model.*;
 import iuh.fit.haitebooks_backend.repository.BookRepository;
 import iuh.fit.haitebooks_backend.repository.OrderRepository;
@@ -33,7 +35,7 @@ public class OrderService {
 
     // ✅ Tạo đơn hàng mới
     @Transactional
-    public Order createOrder(OrderRequest request) {
+    public OrderResponse createOrder(OrderRequest request) {
 
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -99,7 +101,7 @@ public class OrderService {
 
         order.setTotal(total);
 
-        orderRepository.save(order);
+        order = orderRepository.save(order);
 
         // 🔥 Gửi thông báo cho user
         NotificationRequest noti = new NotificationRequest();
@@ -108,32 +110,56 @@ public class OrderService {
         noti.setContent("Đơn #" + order.getId() + " đã được tạo.");
         notificationService.send(noti, null);
 
-        return order;
+        // Đảm bảo lazy relationships được load trong transaction
+        loadLazyRelationships(order);
+        return OrderMapper.toOrderResponse(order);
     }
 
     // ✅ Lấy tất cả đơn hàng
-    public List<Order> getAllOrders() {
-        return orderRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<OrderResponse> getAllOrders() {
+        List<Order> orders = orderRepository.findAll();
+        // Map trong transaction để đảm bảo lazy relationships được load
+        return orders.stream()
+                .map(order -> {
+                    loadLazyRelationships(order);
+                    return OrderMapper.toOrderResponse(order);
+                })
+                .collect(Collectors.toList());
     }
 
     // ✅ Lấy đơn hàng theo user
-    public List<Order> findByUser(Long userId) {
+    @Transactional(readOnly = true)
+    public List<OrderResponse> findByUser(Long userId) {
         if (!userRepository.existsById(userId)) {
             throw new RuntimeException("User not found with id: " + userId);
         }
-        return orderRepository.findByUserId(userId);
+        List<Order> orders = orderRepository.findByUserId(userId);
+        // Map trong transaction để đảm bảo lazy relationships được load
+        return orders.stream()
+                .map(order -> {
+                    loadLazyRelationships(order);
+                    return OrderMapper.toOrderResponse(order);
+                })
+                .collect(Collectors.toList());
     }
 
     // ✅ Lấy đơn hàng theo ID
-    public Order getOrderById(Long id) {
-        return orderRepository.findById(id)
+    @Transactional(readOnly = true)
+    public OrderResponse getOrderById(Long id) {
+        Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Order not found with id " + id));
+        
+        // Đảm bảo lazy relationships được load trong transaction
+        loadLazyRelationships(order);
+        return OrderMapper.toOrderResponse(order);
     }
 
     // ✅ Cập nhật trạng thái đơn hàng (có kiểm tra hợp lệ)
     @Transactional
-    public Order updateOrderStatus(Long id, String status) {
-        Order order = getOrderById(id);
+    public OrderResponse updateOrderStatus(Long id, String status) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Order not found with id " + id));
 
         try {
             Status_Order newStatus = Status_Order.valueOf(status.toUpperCase());
@@ -154,6 +180,9 @@ public class OrderService {
 
             order.setStatus(newStatus);
             Order saved = orderRepository.save(order);
+
+            // Đảm bảo lazy relationships được load trong transaction
+            loadLazyRelationships(saved);
 
             // --- Gửi notification cho user của đơn hàng ---
             try {
@@ -192,7 +221,7 @@ public class OrderService {
                 System.err.println("Không gửi được notification: " + ex.getMessage());
             }
 
-            return saved;
+            return OrderMapper.toOrderResponse(saved);
 
         } catch (IllegalArgumentException e) {
             throw new RuntimeException("Invalid status: " + status);
@@ -200,10 +229,33 @@ public class OrderService {
     }
 
     // ✅ Xóa đơn hàng
+    @Transactional
     public void deleteOrder(Long id) {
         if (!orderRepository.existsById(id)) {
             throw new RuntimeException("Order not found with id " + id);
         }
         orderRepository.deleteById(id);
+    }
+
+    /**
+     * Đảm bảo lazy relationships được load trong transaction
+     */
+    private void loadLazyRelationships(Order order) {
+        // Load user relationship
+        if (order.getUser() != null) {
+            order.getUser().getId();
+            order.getUser().getUsername();
+            order.getUser().getEmail();
+        }
+        
+        // Load order items và book relationships
+        if (order.getOrderItems() != null) {
+            order.getOrderItems().forEach(item -> {
+                if (item.getBook() != null) {
+                    item.getBook().getId();
+                    item.getBook().getTitle();
+                }
+            });
+        }
     }
 }

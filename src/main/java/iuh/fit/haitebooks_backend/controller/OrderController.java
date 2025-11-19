@@ -2,8 +2,6 @@ package iuh.fit.haitebooks_backend.controller;
 
 import iuh.fit.haitebooks_backend.dtos.request.OrderRequest;
 import iuh.fit.haitebooks_backend.dtos.response.OrderResponse;
-import iuh.fit.haitebooks_backend.mapper.OrderMapper;
-import iuh.fit.haitebooks_backend.model.Order;
 import iuh.fit.haitebooks_backend.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -25,33 +23,29 @@ public class OrderController {
     // ✅ Lấy tất cả orders
     @GetMapping
     public ResponseEntity<List<OrderResponse>> getAllOrders() {
-        List<OrderResponse> responses = orderService.getAllOrders()
-                .stream().map(OrderMapper::toOrderResponse).toList();
+        List<OrderResponse> responses = orderService.getAllOrders();
         return ResponseEntity.ok(responses);
     }
 
     // ✅ Tạo đơn hàng
     @PostMapping
     public ResponseEntity<OrderResponse> createOrder(@Valid @RequestBody OrderRequest request) {
-        Order order = orderService.createOrder(request);
-        return ResponseEntity.ok(OrderMapper.toOrderResponse(order));
+        OrderResponse order = orderService.createOrder(request);
+        return ResponseEntity.ok(order);
     }
 
     // ✅ Lấy đơn hàng theo user
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<OrderResponse>> getOrdersByUser(@PathVariable Long userId) {
-        List<OrderResponse> responses = orderService.findByUser(userId)
-                .stream()
-                .map(OrderMapper::toOrderResponse)
-                .toList();
+        List<OrderResponse> responses = orderService.findByUser(userId);
         return ResponseEntity.ok(responses);
     }
 
     // ✅ Lấy đơn hàng theo ID
     @GetMapping("/{id}")
     public ResponseEntity<OrderResponse> getOrder(@PathVariable Long id) {
-        Order order = orderService.getOrderById(id);
-        return ResponseEntity.ok(OrderMapper.toOrderResponse(order));
+        OrderResponse order = orderService.getOrderById(id);
+        return ResponseEntity.ok(order);
     }
 
     // ✅ Cập nhật trạng thái đơn hàng
@@ -60,8 +54,8 @@ public class OrderController {
             @PathVariable Long id,
             @RequestBody Map<String, String> requestBody) {
         String status = requestBody.get("status");
-        Order updatedOrder = orderService.updateOrderStatus(id, status);
-        return ResponseEntity.ok(OrderMapper.toOrderResponse(updatedOrder));
+        OrderResponse updatedOrder = orderService.updateOrderStatus(id, status);
+        return ResponseEntity.ok(updatedOrder);
     }
 
     // ✅ Xóa đơn hàng
