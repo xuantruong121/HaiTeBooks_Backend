@@ -47,6 +47,9 @@ public class OrderService {
         order.setAddress(request.getAddress());
         order.setNote(request.getNote());
 
+        // Tạo biến final để sử dụng trong lambda
+        final Order finalOrder = order;
+
         // ========================================================
         // Xử lý cart items
         // ========================================================
@@ -63,7 +66,7 @@ public class OrderService {
             bookRepository.save(book);
 
             Order_Item item = new Order_Item();
-            item.setOrder(order);
+            item.setOrder(finalOrder);
             item.setBook(book);
             item.setQuantity(itemReq.getQuantity());
             item.setPrice(itemReq.getPrice());
