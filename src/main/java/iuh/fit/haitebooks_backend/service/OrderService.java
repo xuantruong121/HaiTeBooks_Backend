@@ -46,16 +46,6 @@ public class OrderService {
         order.setNote(request.getNote());
 
         // ========================================================
-        // 🔥 ÁP DỤNG KHUYẾN MÃI (NẾU CÓ)
-        // ========================================================
-        Promotion appliedPromotion = null;
-
-        if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
-            appliedPromotion = promotionService.applyPromotion(request.getPromotionCode());
-            order.setAppliedPromotion(appliedPromotion);
-        }
-
-        // ========================================================
         // Xử lý cart items
         // ========================================================
         List<Order_Item> items = request.getOrderItems().stream().map(itemReq -> {
@@ -82,12 +72,26 @@ public class OrderService {
         order.setOrderItems(items);
 
         // ========================================================
-        // 🔥 Tính tổng tiền sau khi trừ khuyến mãi
+        // 🔥 Tính tổng tiền TRƯỚC khi áp dụng khuyến mãi
         // ========================================================
         double total = items.stream()
                 .mapToDouble(i -> i.getPrice() * i.getQuantity())
                 .sum();
 
+        // ========================================================
+        // 🔥 ÁP DỤNG KHUYẾN MÃI (NẾU CÓ) - Kiểm tra điều kiện đơn hàng tối thiểu
+        // ========================================================
+        Promotion appliedPromotion = null;
+
+        if (request.getPromotionCode() != null && !request.getPromotionCode().isBlank()) {
+            // Truyền tổng tiền để kiểm tra điều kiện đơn hàng tối thiểu
+            appliedPromotion = promotionService.applyPromotion(request.getPromotionCode(), total);
+            order.setAppliedPromotion(appliedPromotion);
+        }
+
+        // ========================================================
+        // 🔥 Tính tổng tiền SAU khi trừ khuyến mãi
+        // ========================================================
         if (appliedPromotion != null) {
             double discount = total * (appliedPromotion.getDiscountPercent() / 100.0);
             total = total - discount;

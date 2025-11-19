@@ -45,6 +45,7 @@ public class PromotionService {
         p.setStartDate(req.getStartDate());
         p.setEndDate(req.getEndDate());
         p.setQuantity(req.getQuantity());
+        p.setMinimumOrderAmount(req.getMinimumOrderAmount());
         p.setCreatedBy(creator);
         p.setActive(true);
 
@@ -140,6 +141,10 @@ public class PromotionService {
     }
 
     public Promotion validatePromotion(String code) {
+        return validatePromotion(code, null);
+    }
+
+    public Promotion validatePromotion(String code, Double orderAmount) {
         Promotion p = promotionRepo.findByCode(code)
                 .orElseThrow(() -> new RuntimeException("Mã khuyến mãi không tồn tại"));
 
@@ -160,13 +165,25 @@ public class PromotionService {
         if (today.isAfter(p.getEndDate())) {
             throw new RuntimeException("Mã khuyến mãi đã hết hạn");
         }
+        // Kiểm tra điều kiện đơn hàng tối thiểu
+        if (p.getMinimumOrderAmount() != null && orderAmount != null) {
+            if (orderAmount < p.getMinimumOrderAmount()) {
+                throw new RuntimeException("Đơn hàng phải có giá trị tối thiểu " + 
+                    String.format("%.0f", p.getMinimumOrderAmount()) + " VND để sử dụng mã này");
+            }
+        }
 
         return p;
     }
 
     @Transactional
     public Promotion applyPromotion(String code) {
-        Promotion p = validatePromotion(code);
+        return applyPromotion(code, null);
+    }
+
+    @Transactional
+    public Promotion applyPromotion(String code, Double orderAmount) {
+        Promotion p = validatePromotion(code, orderAmount);
 
         // giảm số lượng
         p.setQuantity(p.getQuantity() - 1);
@@ -176,6 +193,47 @@ public class PromotionService {
         saveLog(p, p.getApprovedBy(), "USE");
 
         return p;
+    }
+
+    // ---------------------------------------
+    // 🔥 UPDATE PROMOTION
+    // ---------------------------------------
+    @Transactional
+    public PromotionResponse update(Long promotionId, PromotionRequest req) {
+        // Tìm promotion theo ID
+        Promotion p = promotionRepo.findById(promotionId)
+                .orElseThrow(() -> new RuntimeException("Promotion not found"));
+
+        // Validate: Kiểm tra code không trùng với promotion khác (trừ chính nó)
+        if (!p.getCode().equals(req.getCode())) {
+            if (promotionRepo.existsByCode(req.getCode())) {
+                throw new RuntimeException("Promotion code already exists");
+            }
+        }
+
+        // Validate: Start date phải trước end date
+        if (req.getStartDate().isAfter(req.getEndDate())) {
+            throw new RuntimeException("Start date must be before end date");
+        }
+
+        // Cập nhật các field
+        p.setName(req.getName());
+        p.setCode(req.getCode());
+        p.setDiscountPercent(req.getDiscountPercent());
+        p.setStartDate(req.getStartDate());
+        p.setEndDate(req.getEndDate());
+        p.setQuantity(req.getQuantity());
+        p.setMinimumOrderAmount(req.getMinimumOrderAmount());
+        promotionRepo.save(p);
+
+        // Log UPDATE
+        if (p.getApprovedBy() != null) {
+            saveLog(p, p.getApprovedBy(), PromotionLog.UPDATE);
+        } else if (p.getCreatedBy() != null) {
+            saveLog(p, p.getCreatedBy(), PromotionLog.UPDATE);
+        }
+
+        return PromotionMapper.toResponse(p);
     }
 
 }

@@ -71,4 +71,13 @@ public class PromotionController {
     public ResponseEntity<List<PromotionResponse>> getAll() {
         return ResponseEntity.ok(promotionService.getAll());
     }
+
+    // UPDATE
+    @PutMapping("/update/{promotionId}")
+    public ResponseEntity<PromotionResponse> update(
+            @PathVariable Long promotionId,
+            @RequestBody PromotionRequest req
+    ) {
+        return ResponseEntity.ok(promotionService.update(promotionId, req));
+    }
 }

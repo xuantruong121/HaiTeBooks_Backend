@@ -11,6 +11,7 @@ public class PromotionResponse {
     private String startDate;
     private String endDate;
     private int quantity;
+    private Double minimumOrderAmount; // Điều kiện đơn hàng tối thiểu (VND), null = không có điều kiện
     private boolean active;
     private Long createdBy;
     private Long approvedBy;

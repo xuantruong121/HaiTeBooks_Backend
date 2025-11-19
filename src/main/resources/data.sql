@@ -113,6 +113,7 @@ CREATE TABLE promotions (
     start_date DATE NOT NULL,
     end_date DATE NOT NULL,
     quantity INT NOT NULL,
+    minimum_order_amount DOUBLE NULL,
     is_active BOOLEAN DEFAULT TRUE,
     created_by_user_id BIGINT,
     approved_by_user_id BIGINT,
@@ -120,9 +121,9 @@ CREATE TABLE promotions (
     FOREIGN KEY (approved_by_user_id) REFERENCES users(id)
 );
 
-INSERT INTO promotions (name, code, discount_percent, start_date, end_date, quantity, is_active, created_by_user_id) VALUES
-    ('Giảm 20% tháng 12', 'SALE20', 20, '2025-12-01', '2025-12-31', 50, TRUE, 1),
-    ('Tặng 10% khách hàng mới', 'NEW10', 10, '2025-01-01', '2025-12-31', 100, TRUE, 1);
+INSERT INTO promotions (name, code, discount_percent, start_date, end_date, quantity, minimum_order_amount, is_active, created_by_user_id) VALUES
+    ('Giảm 20% tháng 12', 'SALE20', 20, '2025-12-01', '2025-12-31', 50, 99000, TRUE, 1),
+    ('Tặng 10% khách hàng mới', 'NEW10', 10, '2025-01-01', '2025-12-31', 100, NULL, TRUE, 1);
 
 -- ========================
 -- 7️⃣ PROMOTION LOGS
