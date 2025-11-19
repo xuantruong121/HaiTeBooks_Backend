@@ -13,7 +13,6 @@ COPY -- from=build /app/target/HaiTeBooks_Backend-0.0.1-SNAPSHOT.war HaiTeBooks_
 
 RUN mkdir -p /app/uploads
 VOLUME ["/app/uploads"]
-I
 
 EXPOSE 8080
 
