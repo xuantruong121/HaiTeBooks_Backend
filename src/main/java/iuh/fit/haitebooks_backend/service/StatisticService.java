@@ -6,6 +6,7 @@ import iuh.fit.haitebooks_backend.repository.OrderRepository;
 import iuh.fit.haitebooks_backend.repository.PaymentRepository;
 import iuh.fit.haitebooks_backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class StatisticService {
@@ -19,6 +20,7 @@ public class StatisticService {
         this.paymentRepository = paymentRepository;
     }
 
+    @Transactional(readOnly = true)
     public StatisticResponse getOverview() {
         long users = userRepository.count();
         long orders = orderRepository.count();

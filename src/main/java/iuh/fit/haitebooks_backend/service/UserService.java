@@ -8,6 +8,7 @@ import iuh.fit.haitebooks_backend.repository.RoleRepository;
 import iuh.fit.haitebooks_backend.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -25,11 +26,13 @@ public class UserService {
     }
 
     // ✅ Lấy tất cả người dùng
+    @Transactional(readOnly = true)
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
 
     // ✅ Đăng ký người dùng (dành cho AuthController)
+    @Transactional
     public User register(User user, String roleName) {
         if (userRepository.existsByUsername(user.getUsername())) {
             throw new RuntimeException("Username already exists");
@@ -52,12 +55,14 @@ public class UserService {
     }
 
     // ✅ Lấy người dùng theo ID
+    @Transactional(readOnly = true)
     public User getUserById(Long id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("User not found with id " + id));
     }
 
     // ✅ Tạo người dùng mới (đăng ký)
+    @Transactional
     public User createUser(UserRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new RuntimeException("Username already exists");
@@ -75,6 +80,7 @@ public class UserService {
     }
 
     // ✅ Cập nhật người dùng (admin hoặc chính họ)
+    @Transactional
     public User updateUser(Long id, UserRequest request) {
         User existing = getUserById(id);
 
@@ -102,6 +108,7 @@ public class UserService {
     }
 
     // ✅ Xóa người dùng
+    @Transactional
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
             throw new NoSuchElementException("User not found with id " + id);
@@ -110,6 +117,7 @@ public class UserService {
     }
 
     // ✅ Lấy người dùng theo username (dùng cho /me)
+    @Transactional(readOnly = true)
     public User getByUsername(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));

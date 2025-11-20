@@ -50,11 +50,13 @@ public class PaymentService {
     }
 
     // ✅ Tìm thanh toán theo order
+    @Transactional(readOnly = true)
     public List<Payment> findByOrder(Long orderId) {
         return paymentRepository.findByOrderId(orderId);
     }
 
     // ✅ Tìm thanh toán theo user
+    @Transactional(readOnly = true)
     public List<Payment> findByUser(Long userId) {
         return paymentRepository.findByOrder_User_Id(userId);
     }
@@ -118,6 +120,7 @@ public class PaymentService {
         return savedPayment;
     }
 
+    @Transactional(readOnly = true)
     public Optional<Payment> findByVnpTxnRef(String txnRef) {
         return paymentRepository.findByVnpTxnRef(txnRef);
     }

@@ -49,21 +49,32 @@ public class ReviewService {
     }
 
     // ✅ Lấy tất cả review
+    @Transactional(readOnly = true)
     public List<Review> getAll() {
         return reviewRepository.findAll();
     }
 
     // ✅ Lấy review theo sách
+    @Transactional(readOnly = true)
     public List<Review> findByBook(Long bookId) {
         return reviewRepository.findByBookId(bookId);
     }
 
     // ✅ Lấy review theo user
+    @Transactional(readOnly = true)
     public List<Review> findByUser(Long userId) {
         return reviewRepository.findByUserId(userId);
     }
 
+    @Transactional(readOnly = true)
     public ReviewResponse toResponse(Review review) {
+        // Đảm bảo lazy relationships được load trong transaction
+        if (review.getUser() != null) {
+            review.getUser().getId();
+        }
+        if (review.getBook() != null) {
+            review.getBook().getId();
+        }
         return ReviewMapper.toResponse(review);
     }
 }

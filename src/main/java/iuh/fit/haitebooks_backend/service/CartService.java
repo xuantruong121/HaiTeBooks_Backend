@@ -8,6 +8,7 @@ import iuh.fit.haitebooks_backend.repository.BookRepository;
 import iuh.fit.haitebooks_backend.repository.CartRepository;
 import iuh.fit.haitebooks_backend.repository.UserRepository;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -27,10 +28,12 @@ public class CartService {
         this.bookRepository = bookRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<Cart> getCartByUser(Long userId) {
         return cartRepository.findByUserId(userId);
     }
 
+    @Transactional
     public Cart addToCart(CartRequest request, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
@@ -53,6 +56,7 @@ public class CartService {
         return cartRepository.save(cart);
     }
 
+    @Transactional
     public Cart updateQuantity(Long id, int quantity) {
         Cart cart = cartRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cart item not found with id: " + id));
@@ -60,6 +64,7 @@ public class CartService {
         return cartRepository.save(cart);
     }
 
+    @Transactional
     public void removeFromCart(Long id) {
         cartRepository.deleteById(id);
     }

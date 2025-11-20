@@ -10,6 +10,7 @@ import iuh.fit.haitebooks_backend.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -23,6 +24,7 @@ public class NotificationService {
     private final SimpMessagingTemplate messagingTemplate;
 
     // 🔥 Gửi thông báo (Lưu DB + Realtime)
+    @Transactional
     public NotificationResponse send(NotificationRequest req, Long senderId) {
 
         User receiver = userRepo.findById(req.getReceiverId())
@@ -54,24 +56,39 @@ public class NotificationService {
     }
 
     // 🔥 Lấy tất cả thông báo theo userId
+    @Transactional(readOnly = true)
     public List<NotificationResponse> getUserNotifications(Long userId) {
         return notificationRepo
                 .findByReceiverIdOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(NotificationMapper::toResponse)
+                .map(notification -> {
+                    // Đảm bảo lazy relationships được load trong transaction
+                    if (notification.getSender() != null) {
+                        notification.getSender().getFullName();
+                    }
+                    return NotificationMapper.toResponse(notification);
+                })
                 .toList();
     }
 
     // 🔥 Lấy thông báo chưa đọc theo userId
+    @Transactional(readOnly = true)
     public List<NotificationResponse> getUnread(Long userId) {
         return notificationRepo
                 .findByReceiverIdAndIsReadFalseOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(NotificationMapper::toResponse)
+                .map(notification -> {
+                    // Đảm bảo lazy relationships được load trong transaction
+                    if (notification.getSender() != null) {
+                        notification.getSender().getFullName();
+                    }
+                    return NotificationMapper.toResponse(notification);
+                })
                 .toList();
     }
 
     // 🔥 Đánh dấu một thông báo là đã đọc
+    @Transactional
     public void markAsRead(Long id) {
         Notification noti = notificationRepo.findById(id)
                 .orElseThrow(() -> new RuntimeException("Notification not found"));
@@ -80,6 +97,7 @@ public class NotificationService {
     }
 
     // 🔥 Đánh dấu tất cả là đã đọc
+    @Transactional
     public void markAllAsRead(Long userId) {
         List<Notification> list = notificationRepo.findByReceiverIdOrderByCreatedAtDesc(userId);
         list.forEach(n -> n.setRead(true));
@@ -87,11 +105,13 @@ public class NotificationService {
     }
 
     // 🔥 Xóa 1 thông báo
+    @Transactional
     public void delete(Long id) {
         notificationRepo.deleteById(id);
     }
 
     // 🔥 Xóa tất cả thông báo của userId
+    @Transactional
     public void deleteAll(Long userId) {
         notificationRepo.deleteByReceiverId(userId);
     }

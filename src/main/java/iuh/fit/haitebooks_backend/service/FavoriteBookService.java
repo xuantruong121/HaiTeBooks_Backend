@@ -28,6 +28,7 @@ public class FavoriteBookService {
         this.bookRepository = bookRepository;
     }
 
+    @Transactional(readOnly = true)
     public List<FavoriteBook> getFavoritesByUser(Long userId) {
         return favoriteBookRepository.findByUserId(userId);
     }
@@ -64,6 +65,7 @@ public class FavoriteBookService {
         favoriteBookRepository.deleteByUserAndBook(user, book);
     }
 
+    @Transactional(readOnly = true)
     public boolean isFavorite(Long bookId, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
