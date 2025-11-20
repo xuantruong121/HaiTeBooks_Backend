@@ -1,5 +1,6 @@
 package iuh.fit.haitebooks_backend.service;
 
+import iuh.fit.haitebooks_backend.ai.service.EmbeddingAsyncService;
 import iuh.fit.haitebooks_backend.dtos.request.BookRequest;
 import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
 import iuh.fit.haitebooks_backend.mapper.BookMapper;
@@ -7,6 +8,8 @@ import iuh.fit.haitebooks_backend.model.Book;
 import iuh.fit.haitebooks_backend.model.BookCategory;
 import iuh.fit.haitebooks_backend.repository.BookRepository;
 import iuh.fit.haitebooks_backend.repository.CategoryRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,12 +21,18 @@ import java.util.stream.Collectors;
 @Service
 public class BookService {
 
+    private static final Logger log = LoggerFactory.getLogger(BookService.class);
+
     private final BookRepository bookRepository;
     private final CategoryRepository categoryRepository;
+    private final EmbeddingAsyncService embeddingAsyncService;
 
-    public BookService(BookRepository bookRepository, CategoryRepository categoryRepository) {
+    public BookService(BookRepository bookRepository, 
+                      CategoryRepository categoryRepository,
+                      EmbeddingAsyncService embeddingAsyncService) {
         this.bookRepository = bookRepository;
         this.categoryRepository = categoryRepository;
+        this.embeddingAsyncService = embeddingAsyncService;
     }
 
     @Transactional(readOnly = true)
@@ -92,6 +101,10 @@ public class BookService {
         if (book.getCategory() != null) {
             book.getCategory().getName();
         }
+
+        // ✅ Tự động tạo embedding cho sách mới (chạy async để không block response)
+        embeddingAsyncService.generateEmbeddingForBookAsync(book);
+
         return BookMapper.toBookResponse(book);
     }
 

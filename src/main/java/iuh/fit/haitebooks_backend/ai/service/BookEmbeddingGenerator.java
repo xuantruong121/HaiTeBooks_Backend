@@ -161,6 +161,55 @@ public class BookEmbeddingGenerator {
     }
 
     /**
+     * Tạo embedding cho một cuốn sách cụ thể
+     * @param book Sách cần tạo embedding
+     * @return true nếu tạo thành công, false nếu có lỗi
+     */
+    @Transactional
+    public boolean generateEmbeddingForBook(Book book) {
+        if (book == null) {
+            log.warn("⚠️ Book is null, không thể tạo embedding");
+            return false;
+        }
+
+        try {
+            // Kiểm tra xem đã có embedding chưa
+            if (embeddingRepository.findByBookId(book.getId()).isPresent()) {
+                log.info("⏭️ Sách '{}' (ID: {}) đã có embedding, bỏ qua", book.getTitle(), book.getId());
+                return true; // Đã có sẵn, coi như thành công
+            }
+
+            // Tạo text content từ title, description và author
+            String text = buildBookText(book);
+            if (text.trim().isEmpty()) {
+                log.warn("⚠️ Sách '{}' (ID: {}) không có nội dung để tạo embedding", book.getTitle(), book.getId());
+                return false;
+            }
+
+            // Tạo embedding
+            log.info("🔄 Đang tạo embedding cho sách: '{}' (ID: {})", book.getTitle(), book.getId());
+            List<Double> embedding = aiService.generateEmbedding(text);
+
+            if (embedding.isEmpty()) {
+                log.warn("⚠️ Không tạo được embedding cho '{}' (ID: {}). Có thể do rate limit hoặc lỗi API.", 
+                        book.getTitle(), book.getId());
+                return false;
+            }
+
+            // Lưu embedding vào database
+            saveEmbedding(book, embedding);
+            log.info("✅ Đã tạo và lưu embedding cho sách: '{}' (ID: {}, {} chiều)", 
+                    book.getTitle(), book.getId(), embedding.size());
+            return true;
+
+        } catch (Exception e) {
+            log.error("❌ Lỗi khi tạo embedding cho sách '{}' (ID: {}): {}", 
+                    book.getTitle(), book.getId(), e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
      * Lưu embedding vào database với transaction riêng để commit ngay lập tức
      */
     @Transactional
