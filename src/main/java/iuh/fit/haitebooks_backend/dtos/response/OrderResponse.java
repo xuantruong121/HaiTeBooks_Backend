@@ -23,4 +23,6 @@ public class OrderResponse {
     private List<OrderItemResponse> items;
     // ✅ Thêm field này
     private PromotionResponse appliedPromotion;
+    // ✅ Thêm field paymentMethod để trả về phương thức thanh toán
+    private String paymentMethod; // "CASH" hoặc "VNPAY"
 }

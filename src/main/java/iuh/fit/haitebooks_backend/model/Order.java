@@ -59,4 +59,9 @@ public class Order {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "applied_promotion_id", nullable = true)
     private Promotion appliedPromotion;
+
+    // ✅ Thêm field paymentMethod để lưu phương thức thanh toán
+    @Enumerated(EnumType.STRING)
+    @Column(name = "payment_method")
+    private Method paymentMethod; // CASH | VNPAY
 }

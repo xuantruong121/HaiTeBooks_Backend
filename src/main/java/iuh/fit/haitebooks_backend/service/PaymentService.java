@@ -171,10 +171,15 @@ public class PaymentService {
 
         paymentRepository.save(payment);
 
-        // update order
+        // ✅ SỬA: KHÔNG thay đổi order status
+        // Order vẫn giữ nguyên status PENDING sau khi thanh toán thành công
+        // Order chỉ chuyển sang COMPLETED khi đã được xác nhận và giao hàng
         Order order = payment.getOrder();
-        order.setStatus(Status_Order.COMPLETED);
-        orderRepository.save(order);
+        // ❌ XÓA: Không set order status = COMPLETED
+        // order.setStatus(Status_Order.COMPLETED);
+        // ✅ Giữ nguyên status hiện tại (PENDING)
+        // Không cần save order vì không có thay đổi
+        // orderRepository.save(order);
     }
 
     @Transactional

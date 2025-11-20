@@ -15,4 +15,7 @@ public class OrderRequest {
     private String address;
     private String note;
     private String promotionCode;
+    
+    // ✅ Thêm field paymentMethod để nhận phương thức thanh toán từ frontend
+    private String paymentMethod; // "CASH" hoặc "VNPAY"
 }

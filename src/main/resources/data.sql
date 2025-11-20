@@ -310,6 +310,7 @@ CREATE TABLE orders
     status_order         ENUM ('PENDING','PROCESSING','SHIPPING','COMPLETED','CANCELLED') DEFAULT 'PENDING',
     address              VARCHAR(255),
     note                 VARCHAR(500),
+    payment_method       ENUM ('CASH', 'VNPAY') DEFAULT 'CASH',
     FOREIGN KEY (user_id) REFERENCES users (id),
     FOREIGN KEY (applied_promotion_id) REFERENCES promotions (id)
 );

@@ -31,7 +31,8 @@ public class OrderMapper {
                 order.getAddress(),
                 order.getNote(),
                 items,
-                toPromotionResponse(order.getAppliedPromotion())
+                toPromotionResponse(order.getAppliedPromotion()),
+                order.getPaymentMethod() != null ? order.getPaymentMethod().name() : null // ✅ Thêm paymentMethod
         );
     }
 

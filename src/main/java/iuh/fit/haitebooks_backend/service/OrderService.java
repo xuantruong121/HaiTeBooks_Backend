@@ -8,6 +8,8 @@ import iuh.fit.haitebooks_backend.model.*;
 import iuh.fit.haitebooks_backend.repository.BookRepository;
 import iuh.fit.haitebooks_backend.repository.OrderRepository;
 import iuh.fit.haitebooks_backend.repository.UserRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,6 +19,8 @@ import java.util.stream.Collectors;
 
 @Service
 public class OrderService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     private final OrderRepository orderRepository;
     private final BookRepository bookRepository;
@@ -46,6 +50,20 @@ public class OrderService {
         order.setOrderDate(LocalDateTime.now());
         order.setAddress(request.getAddress());
         order.setNote(request.getNote());
+
+        // ✅ THÊM: Lưu paymentMethod từ request
+        if (request.getPaymentMethod() != null && !request.getPaymentMethod().isBlank()) {
+            try {
+                order.setPaymentMethod(Method.valueOf(request.getPaymentMethod().toUpperCase()));
+            } catch (IllegalArgumentException e) {
+                // Nếu không hợp lệ, set mặc định là CASH
+                log.warn("⚠️ Payment method không hợp lệ: '{}'. Sử dụng mặc định: CASH", request.getPaymentMethod());
+                order.setPaymentMethod(Method.CASH);
+            }
+        } else {
+            // Mặc định là CASH nếu không có
+            order.setPaymentMethod(Method.CASH);
+        }
 
         // Tạo biến final để sử dụng trong lambda
         final Order finalOrder = order;
