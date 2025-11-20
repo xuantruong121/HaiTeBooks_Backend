@@ -12,6 +12,7 @@ public class PaymentResponse {
     private Long id;
     private Long orderId;
     private Long userId;
+    private String method; // CASH hoặc VNPAY
     private double amount;
     private String status;
     private LocalDateTime paymentDate;

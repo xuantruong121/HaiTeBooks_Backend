@@ -30,6 +30,7 @@ public class PaymentMapper {
                 payment.getOrder() != null && payment.getOrder().getUser() != null
                         ? payment.getOrder().getUser().getId()
                         : null,
+                payment.getMethod() != null ? payment.getMethod().name() : null, // ✅ Thêm method: CASH hoặc VNPAY
                 payment.getAmount(),
                 payment.getStatus() != null ? payment.getStatus().name() : null,
                 payment.getPaymentDate()
