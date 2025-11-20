@@ -31,7 +31,7 @@ public class ReviewService {
 
     // ✅ Tạo mới review
     @Transactional
-    public Review createReview(ReviewRequest request) {
+    public ReviewResponse createReview(ReviewRequest request) {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new RuntimeException("User not found with id " + request.getUserId()));
 
@@ -45,36 +45,61 @@ public class ReviewService {
         }
 
         Review review = ReviewMapper.toEntity(request, user, book);
-        return reviewRepository.save(review);
+        review = reviewRepository.save(review);
+        
+        // Đảm bảo lazy relationships được load trong transaction
+        loadLazyRelationships(review);
+        return ReviewMapper.toResponse(review);
     }
 
     // ✅ Lấy tất cả review
     @Transactional(readOnly = true)
-    public List<Review> getAll() {
-        return reviewRepository.findAll();
+    public List<ReviewResponse> getAll() {
+        List<Review> reviews = reviewRepository.findAll();
+        // Map trong transaction để đảm bảo lazy relationships được load
+        return reviews.stream()
+                .map(review -> {
+                    loadLazyRelationships(review);
+                    return ReviewMapper.toResponse(review);
+                })
+                .toList();
     }
 
     // ✅ Lấy review theo sách
     @Transactional(readOnly = true)
-    public List<Review> findByBook(Long bookId) {
-        return reviewRepository.findByBookId(bookId);
+    public List<ReviewResponse> findByBook(Long bookId) {
+        List<Review> reviews = reviewRepository.findByBookId(bookId);
+        // Map trong transaction để đảm bảo lazy relationships được load
+        return reviews.stream()
+                .map(review -> {
+                    loadLazyRelationships(review);
+                    return ReviewMapper.toResponse(review);
+                })
+                .toList();
     }
 
     // ✅ Lấy review theo user
     @Transactional(readOnly = true)
-    public List<Review> findByUser(Long userId) {
-        return reviewRepository.findByUserId(userId);
+    public List<ReviewResponse> findByUser(Long userId) {
+        List<Review> reviews = reviewRepository.findByUserId(userId);
+        // Map trong transaction để đảm bảo lazy relationships được load
+        return reviews.stream()
+                .map(review -> {
+                    loadLazyRelationships(review);
+                    return ReviewMapper.toResponse(review);
+                })
+                .toList();
     }
 
-    @Transactional(readOnly = true)
-    public ReviewResponse toResponse(Review review) {
-        // Đảm bảo lazy relationships được load trong transaction
+    /**
+     * Đảm bảo lazy relationships được load trong transaction
+     */
+    private void loadLazyRelationships(Review review) {
         if (review.getUser() != null) {
             review.getUser().getId();
         }
         if (review.getBook() != null) {
             review.getBook().getId();
         }
-        return ReviewMapper.toResponse(review);
     }
 }

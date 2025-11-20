@@ -2,8 +2,6 @@ package iuh.fit.haitebooks_backend.controller;
 
 import iuh.fit.haitebooks_backend.dtos.request.ReviewRequest;
 import iuh.fit.haitebooks_backend.dtos.response.ReviewResponse;
-import iuh.fit.haitebooks_backend.mapper.ReviewMapper;
-import iuh.fit.haitebooks_backend.model.Review;
 import iuh.fit.haitebooks_backend.service.ReviewService;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
@@ -24,37 +22,28 @@ public class ReviewController {
     // ✅ Tạo review
     @PostMapping
     public ResponseEntity<ReviewResponse> createReview(@Valid @RequestBody ReviewRequest request) {
-        Review review = reviewService.createReview(request);
-        return ResponseEntity.ok(ReviewMapper.toResponse(review));
+        ReviewResponse review = reviewService.createReview(request);
+        return ResponseEntity.ok(review);
     }
 
     // ✅ Lấy tất cả review
     @GetMapping
     public ResponseEntity<List<ReviewResponse>> getAllReviews() {
-        List<ReviewResponse> responses = reviewService.getAll()
-                .stream()
-                .map(ReviewMapper::toResponse)
-                .toList();
+        List<ReviewResponse> responses = reviewService.getAll();
         return ResponseEntity.ok(responses);
     }
 
     // ✅ Lấy review theo sách
     @GetMapping("/book/{bookId}")
     public ResponseEntity<List<ReviewResponse>> getByBook(@PathVariable Long bookId) {
-        List<ReviewResponse> responses = reviewService.findByBook(bookId)
-                .stream()
-                .map(ReviewMapper::toResponse)
-                .toList();
+        List<ReviewResponse> responses = reviewService.findByBook(bookId);
         return ResponseEntity.ok(responses);
     }
 
     // ✅ Lấy review theo user
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<ReviewResponse>> getByUser(@PathVariable Long userId) {
-        List<ReviewResponse> responses = reviewService.findByUser(userId)
-                .stream()
-                .map(ReviewMapper::toResponse)
-                .toList();
+        List<ReviewResponse> responses = reviewService.findByUser(userId);
         return ResponseEntity.ok(responses);
     }
 }

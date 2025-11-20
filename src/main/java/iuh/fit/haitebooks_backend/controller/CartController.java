@@ -2,7 +2,6 @@ package iuh.fit.haitebooks_backend.controller;
 
 import iuh.fit.haitebooks_backend.dtos.request.CartRequest;
 import iuh.fit.haitebooks_backend.dtos.response.CartResponse;
-import iuh.fit.haitebooks_backend.model.Cart;
 import iuh.fit.haitebooks_backend.service.CartService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -23,30 +22,21 @@ public class CartController {
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<CartResponse>> getCartByUser(@PathVariable Long userId) {
-        List<CartResponse> responses = cartService.getCartByUser(userId)
-                .stream()
-                .map(c -> new CartResponse(c.getId(), c.getUser().getId(), c.getBook().getId(),
-                        c.getQuantity()))
-                .toList();
+        List<CartResponse> responses = cartService.getCartByUser(userId);
         return ResponseEntity.ok(responses);
     }
 
     @PostMapping("/add")
     public ResponseEntity<CartResponse> addToCart(@RequestBody CartRequest request) {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
-        Cart cart = cartService.addToCart(request,username);
-        CartResponse response = new CartResponse(
-                cart.getId(),
-                cart.getUser().getId(),
-                cart.getBook().getId(),
-                cart.getQuantity()
-        );
+        CartResponse response = cartService.addToCart(request, username);
         return ResponseEntity.ok(response);
     }
 
     @PutMapping("/update/{id}")
-    public ResponseEntity<Cart> updateQuantity(@PathVariable Long id, @RequestBody CartRequest req) {
-        return ResponseEntity.ok(cartService.updateQuantity(id, req.getQuantity()));
+    public ResponseEntity<CartResponse> updateQuantity(@PathVariable Long id, @RequestBody CartRequest req) {
+        CartResponse response = cartService.updateQuantity(id, req.getQuantity());
+        return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/remove/{id}")

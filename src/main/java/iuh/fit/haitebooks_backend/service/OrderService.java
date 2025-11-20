@@ -62,8 +62,9 @@ public class OrderService {
                 throw new RuntimeException("Not enough stock for: " + book.getTitle());
             }
 
+            // ✅ Tối ưu: Chỉ cập nhật stock, không save từng cái
+            // Hibernate sẽ tự động flush khi transaction commit
             book.setStock(book.getStock() - itemReq.getQuantity());
-            bookRepository.save(book);
 
             Order_Item item = new Order_Item();
             item.setOrder(finalOrder);
@@ -73,6 +74,10 @@ public class OrderService {
             return item;
 
         }).toList();
+        
+        // ✅ Tối ưu: Batch update tất cả books một lần
+        // Collect unique books và saveAll (nếu cần, nhưng thường Hibernate tự flush)
+        // Vì đã set stock, Hibernate sẽ tự động update khi transaction commit
 
         order.setOrderItems(items);
 

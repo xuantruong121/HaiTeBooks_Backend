@@ -24,10 +24,8 @@ public class StatisticService {
     public StatisticResponse getOverview() {
         long users = userRepository.count();
         long orders = orderRepository.count();
-        double revenue = paymentRepository.findAll()
-                .stream()
-                .mapToDouble(Payment::getAmount)
-                .sum();
+        // ✅ Tối ưu: Dùng SUM query thay vì load tất cả vào memory
+        double revenue = paymentRepository.calculateTotalRevenue();
         return new StatisticResponse(users, orders, revenue);
     }
 }

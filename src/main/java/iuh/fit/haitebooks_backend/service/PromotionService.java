@@ -122,10 +122,28 @@ public class PromotionService {
     // ---------------------------------------
     // 🔥 GET ALL
     // ---------------------------------------
+    @Transactional(readOnly = true)
     public List<PromotionResponse> getAll() {
-        return promotionRepo.findAll().stream()
-                .map(PromotionMapper::toResponse)
+        List<Promotion> promotions = promotionRepo.findAll();
+        // Map trong transaction để đảm bảo lazy relationships được load
+        return promotions.stream()
+                .map(promotion -> {
+                    loadLazyRelationships(promotion);
+                    return PromotionMapper.toResponse(promotion);
+                })
                 .toList();
+    }
+
+    /**
+     * Đảm bảo lazy relationships được load trong transaction
+     */
+    private void loadLazyRelationships(Promotion promotion) {
+        if (promotion.getCreatedBy() != null) {
+            promotion.getCreatedBy().getId();
+        }
+        if (promotion.getApprovedBy() != null) {
+            promotion.getApprovedBy().getId();
+        }
     }
 
     // ---------------------------------------

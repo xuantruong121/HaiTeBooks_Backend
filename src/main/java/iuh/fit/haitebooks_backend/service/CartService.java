@@ -1,6 +1,8 @@
 package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.CartRequest;
+import iuh.fit.haitebooks_backend.dtos.response.CartResponse;
+import iuh.fit.haitebooks_backend.mapper.CartMapper;
 import iuh.fit.haitebooks_backend.model.Book;
 import iuh.fit.haitebooks_backend.model.Cart;
 import iuh.fit.haitebooks_backend.model.User;
@@ -12,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class CartService {
@@ -29,12 +32,19 @@ public class CartService {
     }
 
     @Transactional(readOnly = true)
-    public List<Cart> getCartByUser(Long userId) {
-        return cartRepository.findByUserId(userId);
+    public List<CartResponse> getCartByUser(Long userId) {
+        List<Cart> carts = cartRepository.findByUserId(userId);
+        // Map trong transaction để đảm bảo lazy relationships được load
+        return carts.stream()
+                .map(cart -> {
+                    loadLazyRelationships(cart);
+                    return CartMapper.toResponse(cart);
+                })
+                .collect(Collectors.toList());
     }
 
     @Transactional
-    public Cart addToCart(CartRequest request, String username) {
+    public CartResponse addToCart(CartRequest request, String username) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found"));
         Book book = bookRepository.findById(request.getBookId())
@@ -53,15 +63,35 @@ public class CartService {
             cart.setQuantity(request.getQuantity());
         }
 
-        return cartRepository.save(cart);
+        cart = cartRepository.save(cart);
+        
+        // Đảm bảo lazy relationships được load trong transaction
+        loadLazyRelationships(cart);
+        return CartMapper.toResponse(cart);
     }
 
     @Transactional
-    public Cart updateQuantity(Long id, int quantity) {
+    public CartResponse updateQuantity(Long id, int quantity) {
         Cart cart = cartRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Cart item not found with id: " + id));
         cart.setQuantity(quantity);
-        return cartRepository.save(cart);
+        cart = cartRepository.save(cart);
+        
+        // Đảm bảo lazy relationships được load trong transaction
+        loadLazyRelationships(cart);
+        return CartMapper.toResponse(cart);
+    }
+
+    /**
+     * Đảm bảo lazy relationships được load trong transaction
+     */
+    private void loadLazyRelationships(Cart cart) {
+        if (cart.getUser() != null) {
+            cart.getUser().getId();
+        }
+        if (cart.getBook() != null) {
+            cart.getBook().getId();
+        }
     }
 
     @Transactional

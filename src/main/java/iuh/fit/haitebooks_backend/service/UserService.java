@@ -1,6 +1,7 @@
 package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.UserRequest;
+import iuh.fit.haitebooks_backend.dtos.response.UserResponse;
 import iuh.fit.haitebooks_backend.mapper.UserMapper;
 import iuh.fit.haitebooks_backend.model.Role;
 import iuh.fit.haitebooks_backend.model.User;
@@ -12,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.stream.Collectors;
 
 @Service
 public class UserService {
@@ -27,8 +29,15 @@ public class UserService {
 
     // ✅ Lấy tất cả người dùng
     @Transactional(readOnly = true)
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public List<UserResponse> getAllUsers() {
+        List<User> users = userRepository.findAll();
+        // Map trong transaction để đảm bảo lazy relationships được load
+        return users.stream()
+                .map(user -> {
+                    loadLazyRelationships(user);
+                    return UserMapper.toResponse(user);
+                })
+                .collect(Collectors.toList());
     }
 
     // ✅ Đăng ký người dùng (dành cho AuthController)
@@ -56,14 +65,18 @@ public class UserService {
 
     // ✅ Lấy người dùng theo ID
     @Transactional(readOnly = true)
-    public User getUserById(Long id) {
-        return userRepository.findById(id)
+    public UserResponse getUserById(Long id) {
+        User user = userRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("User not found with id " + id));
+        
+        // Đảm bảo lazy relationships được load trong transaction
+        loadLazyRelationships(user);
+        return UserMapper.toResponse(user);
     }
 
     // ✅ Tạo người dùng mới (đăng ký)
     @Transactional
-    public User createUser(UserRequest request) {
+    public UserResponse createUser(UserRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new RuntimeException("Username already exists");
         }
@@ -76,13 +89,18 @@ public class UserService {
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         User user = UserMapper.toEntity(request, role, encodedPassword);
-        return userRepository.save(user);
+        user = userRepository.save(user);
+        
+        // Đảm bảo lazy relationships được load trong transaction
+        loadLazyRelationships(user);
+        return UserMapper.toResponse(user);
     }
 
     // ✅ Cập nhật người dùng (admin hoặc chính họ)
     @Transactional
-    public User updateUser(Long id, UserRequest request) {
-        User existing = getUserById(id);
+    public UserResponse updateUser(Long id, UserRequest request) {
+        User existing = userRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException("User not found with id " + id));
 
         // Kiểm tra trùng email hoặc username
         userRepository.findByUsername(request.getUsername()).ifPresent(u -> {
@@ -104,7 +122,11 @@ public class UserService {
         }
 
         UserMapper.updateEntity(existing, request, role, encodedPassword);
-        return userRepository.save(existing);
+        existing = userRepository.save(existing);
+        
+        // Đảm bảo lazy relationships được load trong transaction
+        loadLazyRelationships(existing);
+        return UserMapper.toResponse(existing);
     }
 
     // ✅ Xóa người dùng
@@ -118,8 +140,21 @@ public class UserService {
 
     // ✅ Lấy người dùng theo username (dùng cho /me)
     @Transactional(readOnly = true)
-    public User getByUsername(String username) {
-        return userRepository.findByUsername(username)
+    public UserResponse getByUsername(String username) {
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new RuntimeException("User not found: " + username));
+        
+        // Đảm bảo lazy relationships được load trong transaction
+        loadLazyRelationships(user);
+        return UserMapper.toResponse(user);
+    }
+
+    /**
+     * Đảm bảo lazy relationships được load trong transaction
+     */
+    private void loadLazyRelationships(User user) {
+        if (user.getRole() != null) {
+            user.getRole().getName();
+        }
     }
 }
