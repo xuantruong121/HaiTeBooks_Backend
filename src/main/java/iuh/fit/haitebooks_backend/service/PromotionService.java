@@ -46,6 +46,7 @@ public class PromotionService {
         p.setEndDate(req.getEndDate());
         p.setQuantity(req.getQuantity());
         p.setMinimumOrderAmount(req.getMinimumOrderAmount());
+        p.setMaxDiscountAmount(req.getMaxDiscountAmount());
         p.setCreatedBy(creator);
         p.setActive(true);
 
@@ -242,6 +243,7 @@ public class PromotionService {
         p.setEndDate(req.getEndDate());
         p.setQuantity(req.getQuantity());
         p.setMinimumOrderAmount(req.getMinimumOrderAmount());
+        p.setMaxDiscountAmount(req.getMaxDiscountAmount());
         promotionRepo.save(p);
 
         // Log UPDATE

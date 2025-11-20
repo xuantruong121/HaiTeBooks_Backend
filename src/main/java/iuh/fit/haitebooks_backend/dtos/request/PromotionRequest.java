@@ -13,4 +13,5 @@ public class PromotionRequest {
     private LocalDate endDate;
     private int quantity;
     private Double minimumOrderAmount; // Điều kiện đơn hàng tối thiểu (VND), null = không có điều kiện
+    private Double maxDiscountAmount; // Giảm tối đa bao nhiêu tiền (VND), null = không giới hạn
 }

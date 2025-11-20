@@ -104,6 +104,12 @@ public class OrderService {
         // ========================================================
         if (appliedPromotion != null) {
             double discount = total * (appliedPromotion.getDiscountPercent() / 100.0);
+            
+            // ✅ Áp dụng giới hạn giảm tối đa nếu có
+            if (appliedPromotion.getMaxDiscountAmount() != null && discount > appliedPromotion.getMaxDiscountAmount()) {
+                discount = appliedPromotion.getMaxDiscountAmount();
+            }
+            
             total = total - discount;
         }
 
@@ -264,6 +270,17 @@ public class OrderService {
                     item.getBook().getTitle();
                 }
             });
+        }
+        
+        // ✅ Thêm phần này để load appliedPromotion
+        if (order.getAppliedPromotion() != null) {
+            order.getAppliedPromotion().getId();
+            order.getAppliedPromotion().getCode();
+            order.getAppliedPromotion().getName();
+            order.getAppliedPromotion().getDiscountPercent();
+            order.getAppliedPromotion().getMinimumOrderAmount();
+            order.getAppliedPromotion().getMaxDiscountAmount();
+            // Load các field cần thiết khác nếu cần
         }
     }
 }

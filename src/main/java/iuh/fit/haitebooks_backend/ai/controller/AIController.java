@@ -3,10 +3,13 @@ package iuh.fit.haitebooks_backend.ai.controller;
 import iuh.fit.haitebooks_backend.ai.service.BookEmbeddingGenerator;
 import iuh.fit.haitebooks_backend.ai.service.BookRecommendationService;
 import iuh.fit.haitebooks_backend.ai.service.BookSearchService;
+import iuh.fit.haitebooks_backend.ai.service.EmbeddingAsyncService;
 import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -21,16 +24,18 @@ import java.util.Map;
 @Validated
 public class AIController {
 
+    private static final Logger log = LoggerFactory.getLogger(AIController.class);
+
     private final BookSearchService bookSearchService;
     private final BookRecommendationService bookRecommendationService;
-    private final BookEmbeddingGenerator embeddingGenerator;
+    private final EmbeddingAsyncService embeddingAsyncService;
 
     public AIController(BookSearchService bookSearchService, 
                        BookRecommendationService bookRecommendationService,
-                       BookEmbeddingGenerator embeddingGenerator) {
+                       EmbeddingAsyncService embeddingAsyncService) {
         this.bookSearchService = bookSearchService;
         this.bookRecommendationService = bookRecommendationService;
-        this.embeddingGenerator = embeddingGenerator;
+        this.embeddingAsyncService = embeddingAsyncService;
     }
 
     /**
@@ -76,15 +81,10 @@ public class AIController {
      */
     @PostMapping("/generate-embeddings")
     public ResponseEntity<Map<String, String>> generateEmbeddings() {
-        // Chạy trong background thread để không block request
-        new Thread(() -> {
-            try {
-                embeddingGenerator.generateAllEmbeddings();
-            } catch (Exception e) {
-                System.err.println("❌ Lỗi khi sinh embedding: " + e.getMessage());
-                e.printStackTrace();
-            }
-        }).start();
+        log.info("📥 Nhận yêu cầu tạo embedding cho tất cả sách");
+        
+        // Chạy async để không block request
+        embeddingAsyncService.generateEmbeddingsAsync();
         
         Map<String, String> response = new HashMap<>();
         response.put("message", "🚀 Đã bắt đầu sinh embedding cho các sách chưa có. Xem log để theo dõi tiến trình.");

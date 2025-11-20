@@ -31,9 +31,9 @@ public class BookEmbeddingGenerator {
 
     /**
      * Tạo embedding cho tất cả sách chưa có embedding
-     * Chạy trong transaction để đảm bảo tính nhất quán
+     * Không dùng @Transactional ở đây vì transaction quá dài (có thể mất vài phút)
+     * Thay vào đó, commit từng embedding một để đảm bảo dữ liệu được lưu ngay
      */
-    @Transactional
     public void generateAllEmbeddings() {
         log.info("🚀 Bắt đầu sinh embedding cho các sách chưa có...");
         
@@ -78,11 +78,8 @@ public class BookEmbeddingGenerator {
                         continue;
                     }
 
-                    // Lưu embedding vào database
-                    BookEmbedding bookEmbedding = new BookEmbedding();
-                    bookEmbedding.setBook(book);
-                    bookEmbedding.setEmbeddingVector(embedding); // Sử dụng setEmbeddingVector thay vì setEmbeddingJson
-                    embeddingRepository.save(bookEmbedding);
+                    // Lưu embedding vào database (commit ngay lập tức)
+                    saveEmbedding(book, embedding);
 
                     createdCount++;
                     log.info("✅ [{}/{}] Đã tạo embedding cho: '{}' ({} chiều)", 
@@ -115,6 +112,17 @@ public class BookEmbeddingGenerator {
             log.error("❌ Lỗi nghiêm trọng khi sinh embedding: {}", e.getMessage(), e);
             throw new RuntimeException("Lỗi khi sinh embedding", e);
         }
+    }
+
+    /**
+     * Lưu embedding vào database với transaction riêng để commit ngay lập tức
+     */
+    @Transactional
+    private void saveEmbedding(Book book, List<Double> embedding) {
+        BookEmbedding bookEmbedding = new BookEmbedding();
+        bookEmbedding.setBook(book);
+        bookEmbedding.setEmbeddingVector(embedding);
+        embeddingRepository.save(bookEmbedding);
     }
 
     /**

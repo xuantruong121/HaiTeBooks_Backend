@@ -69,6 +69,23 @@ CREATE TABLE books (
 );
 
 INSERT INTO books (title, author, barcode, price, stock, description, image_url, category_id) VALUES
+('Clean Code', 'Robert C. Martin', '9780132350884', 350000, 20,
+ 'A handbook of agile software craftsmanship.',
+ 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848267/cleancode_kwld08.png', 1),
+('The Pragmatic Programmer', 'Andrew Hunt', '9780201616224', 420000,
+ 15, 'Journey to mastery in software development.',
+ 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848267/pragmatic_nmcybl.png', 1),
+('Design Patterns', 'Erich Gamma', '9780201633610', 480000, 10,
+ 'Elements of reusable object-oriented software.',
+ 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/designpatterns_bjpzpe.jpg', 1),
+('Rich Dad Poor Dad', 'Robert Kiyosaki', '9780446677455', 250000, 30,
+ 'What the rich teach their kids about money.',
+ 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/richdad_fnvbwv.png', 2),
+('Harry Potter and the Sorcerer''s Stone', 'J.K. Rowling', '9780747532699', 320000, 50,
+ 'Fantasy novel for all ages.',
+ 'https://res.cloudinary.com/dnxgjpunr/image/upload/v1761848266/harrypotter_kwpopd.webp', 3);
+
+INSERT INTO books (title, author, barcode, price, stock, description, image_url, category_id) VALUES
     -- 1️⃣ Công nghệ thông tin (category_id = 1)
     ('Refactoring', 'Martin Fowler', '9790000000001', 380000, 10,
      'Sách chuyên sâu về lập trình và kỹ thuật phần mềm.',
@@ -245,6 +262,7 @@ CREATE TABLE promotions (
     end_date DATE NOT NULL,
     quantity INT NOT NULL,
     minimum_order_amount DOUBLE NULL,
+    max_discount_amount DOUBLE NULL,
     is_active BOOLEAN DEFAULT TRUE,
     created_by_user_id BIGINT,
     approved_by_user_id BIGINT,
@@ -252,9 +270,9 @@ CREATE TABLE promotions (
     FOREIGN KEY (approved_by_user_id) REFERENCES users(id)
 );
 
-INSERT INTO promotions (name, code, discount_percent, start_date, end_date, quantity, minimum_order_amount, is_active, created_by_user_id) VALUES
-    ('Giảm 20% tháng 12', 'SALE20', 20, '2025-12-01', '2025-12-31', 50, 99000, TRUE, 1),
-    ('Tặng 10% khách hàng mới', 'NEW10', 10, '2025-01-01', '2025-12-31', 100, NULL, TRUE, 1);
+INSERT INTO promotions (name, code, discount_percent, start_date, end_date, quantity, minimum_order_amount, max_discount_amount, is_active, created_by_user_id) VALUES
+    ('Giảm 20% tháng 12', 'SALE20', 20, '2025-12-01', '2025-12-31', 50, 99000, 50000, TRUE, 1),
+    ('Tặng 10% khách hàng mới', 'NEW10', 10, '2025-01-01', '2025-12-31', 100, NULL, NULL, TRUE, 1);
 
 -- ========================
 -- 7️⃣ PROMOTION LOGS
@@ -363,10 +381,6 @@ CREATE TABLE book_embeddings (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (book_id) REFERENCES books(id)
 );
-
-INSERT INTO book_embeddings (book_id, embedding_json) VALUES
-    (1, '[0.12, 0.45, 0.33, 0.87, 0.56, 0.22]'),
-    (2, '[0.77, 0.42, 0.11, 0.93, 0.21, 0.34]');
 
 -- ========================
 -- 1️⃣3️⃣ NOTIFICATIONS

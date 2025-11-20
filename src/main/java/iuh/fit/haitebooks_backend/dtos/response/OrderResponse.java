@@ -21,4 +21,6 @@ public class OrderResponse {
     private String address;
     private String note;
     private List<OrderItemResponse> items;
+    // ✅ Thêm field này
+    private PromotionResponse appliedPromotion;
 }

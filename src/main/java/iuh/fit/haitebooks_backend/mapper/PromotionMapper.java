@@ -15,6 +15,7 @@ public class PromotionMapper {
         res.setEndDate(p.getEndDate().toString());
         res.setQuantity(p.getQuantity());
         res.setMinimumOrderAmount(p.getMinimumOrderAmount());
+        res.setMaxDiscountAmount(p.getMaxDiscountAmount());
         res.setActive(p.isActive());
         res.setCreatedBy(p.getCreatedBy() != null ? p.getCreatedBy().getId() : null);
         res.setApprovedBy(p.getApprovedBy() != null ? p.getApprovedBy().getId() : null);

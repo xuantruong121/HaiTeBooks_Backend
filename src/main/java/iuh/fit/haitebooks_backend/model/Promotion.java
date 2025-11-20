@@ -38,6 +38,9 @@ public class Promotion {
     @Column(name = "minimum_order_amount")
     private Double minimumOrderAmount; // Điều kiện đơn hàng tối thiểu (VND), null = không có điều kiện
 
+    @Column(name = "max_discount_amount")
+    private Double maxDiscountAmount; // Giảm tối đa bao nhiêu tiền (VND), null = không giới hạn
+
     @Column(name = "is_active", nullable = false)
     private boolean isActive = true;
 
