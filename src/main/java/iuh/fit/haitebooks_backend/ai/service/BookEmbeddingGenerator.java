@@ -15,7 +15,7 @@ import java.util.List;
 public class BookEmbeddingGenerator {
 
     private static final Logger log = LoggerFactory.getLogger(BookEmbeddingGenerator.class);
-    private static final long DELAY_BETWEEN_REQUESTS_MS = 1000; // 1 giây giữa các request để tránh rate limit
+    private static final long DELAY_BETWEEN_REQUESTS_MS = 2000; // 2 giây giữa các request để tránh rate limit
 
     private final BookRepository bookRepository;
     private final BookEmbeddingRepository embeddingRepository;
@@ -38,13 +38,40 @@ public class BookEmbeddingGenerator {
         log.info("🚀 Bắt đầu sinh embedding cho các sách chưa có...");
         
         try {
+            // ✅ Debug: Kiểm tra số lượng sách trước khi query
+            long totalBooksCount = bookRepository.count();
+            log.info("📊 Tổng số sách (từ count()): {}", totalBooksCount);
+            
             List<Book> allBooks = bookRepository.findAll();
             int totalBooks = allBooks.size();
             int createdCount = 0;
             int skippedCount = 0;
             int errorCount = 0;
 
-            log.info("📚 Tổng số sách trong database: {}", totalBooks);
+            log.info("📚 Tổng số sách trong database (từ findAll()): {}", totalBooks);
+            
+            // ✅ Cảnh báo nếu count() và findAll().size() không khớp
+            if (totalBooksCount != totalBooks) {
+                log.warn("⚠️ CẢNH BÁO: count()={} nhưng findAll().size()={}. Có thể có vấn đề với query!", 
+                        totalBooksCount, totalBooks);
+            }
+            
+            // ✅ Debug: Log danh sách ID của tất cả sách để kiểm tra
+            if (totalBooks > 0) {
+                List<Long> bookIds = allBooks.stream()
+                        .map(Book::getId)
+                        .toList();
+                log.info("📋 Danh sách ID sách ({} sách): {}", totalBooks, bookIds);
+                log.info("📋 Sách đầu tiên: ID={}, Title='{}'", 
+                        allBooks.get(0).getId(), allBooks.get(0).getTitle());
+                if (totalBooks > 1) {
+                    log.info("📋 Sách cuối cùng: ID={}, Title='{}'", 
+                            allBooks.get(totalBooks - 1).getId(), 
+                            allBooks.get(totalBooks - 1).getTitle());
+                }
+            } else {
+                log.warn("⚠️ Không tìm thấy sách nào trong database! Kiểm tra kết nối database.");
+            }
 
             for (int i = 0; i < allBooks.size(); i++) {
                 Book book = allBooks.get(i);
@@ -73,17 +100,28 @@ public class BookEmbeddingGenerator {
                     List<Double> embedding = aiService.generateEmbedding(text);
 
                     if (embedding.isEmpty()) {
-                        log.warn("⚠️ Không tạo được embedding cho '{}'", book.getTitle());
+                        log.warn("⚠️ Không tạo được embedding cho '{}' (ID: {}). Có thể do rate limit hoặc lỗi API.", 
+                                book.getTitle(), book.getId());
                         errorCount++;
+                        // Nghỉ lâu hơn khi gặp lỗi để tránh rate limit
+                        if (i < allBooks.size() - 1) {
+                            Thread.sleep(DELAY_BETWEEN_REQUESTS_MS * 2);
+                        }
                         continue;
                     }
 
                     // Lưu embedding vào database (commit ngay lập tức)
-                    saveEmbedding(book, embedding);
-
-                    createdCount++;
-                    log.info("✅ [{}/{}] Đã tạo embedding cho: '{}' ({} chiều)", 
-                            i + 1, totalBooks, book.getTitle(), embedding.size());
+                    try {
+                        saveEmbedding(book, embedding);
+                        createdCount++;
+                        log.info("✅ [{}/{}] Đã tạo embedding cho: '{}' ({} chiều)", 
+                                i + 1, totalBooks, book.getTitle(), embedding.size());
+                    } catch (Exception saveEx) {
+                        log.error("❌ Lỗi khi lưu embedding cho '{}' (ID: {}): {}", 
+                                book.getTitle(), book.getId(), saveEx.getMessage(), saveEx);
+                        errorCount++;
+                        continue;
+                    }
 
                     // Nghỉ giữa các request để tránh rate limit
                     if (i < allBooks.size() - 1) {
@@ -107,6 +145,14 @@ public class BookEmbeddingGenerator {
             log.info("   - Đã tạo mới: {}", createdCount);
             log.info("   - Đã có sẵn (bỏ qua): {}", skippedCount);
             log.info("   - Lỗi: {}", errorCount);
+            
+            if (errorCount > 0) {
+                log.warn("⚠️ Có {} sách không tạo được embedding. Kiểm tra log phía trên để xem chi tiết lỗi.", errorCount);
+            }
+            
+            if (createdCount + skippedCount + errorCount != totalBooks) {
+                log.warn("⚠️ Tổng số không khớp! Có thể có sách bị bỏ sót.");
+            }
 
         } catch (Exception e) {
             log.error("❌ Lỗi nghiêm trọng khi sinh embedding: {}", e.getMessage(), e);

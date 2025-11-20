@@ -28,7 +28,7 @@ public class CohereEmbeddingService {
 
     public List<Double> generateEmbedding(String text) {
         int maxRetries = 3;
-        int retryDelayMs = 2000;
+        int retryDelayMs = 3000; // Tăng delay lên 3 giây
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
@@ -70,10 +70,16 @@ public class CohereEmbeddingService {
                 } else {
                     System.err.println("⚠️ Lỗi API: " + response.getStatusCode());
                     System.err.println("📦 Nội dung phản hồi: " + response.getBody());
+                    // Nếu là rate limit (429), tăng delay trước khi retry
+                    if (response.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
+                        System.err.println("🚫 Rate limit detected! Sẽ đợi lâu hơn...");
+                        retryDelayMs = 10000; // Đợi 10 giây nếu bị rate limit
+                    }
                 }
 
             } catch (Exception e) {
                 System.err.println("❌ Lỗi khi gọi Cohere API (lần " + attempt + "): " + e.getMessage());
+                e.printStackTrace(); // In stack trace để debug
             }
 
             if (attempt < maxRetries) {
