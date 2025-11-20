@@ -46,4 +46,21 @@ public class ReviewController {
         List<ReviewResponse> responses = reviewService.findByUser(userId);
         return ResponseEntity.ok(responses);
     }
+
+    // ✅ Cập nhật review
+    @PutMapping("/{id}")
+    public ResponseEntity<ReviewResponse> updateReview(
+            @PathVariable Long id,
+            @Valid @RequestBody ReviewRequest request
+    ) {
+        ReviewResponse updated = reviewService.updateReview(id, request);
+        return ResponseEntity.ok(updated);
+    }
+
+    // ✅ Xóa review
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteReview(@PathVariable Long id) {
+        reviewService.deleteReview(id);
+        return ResponseEntity.noContent().build();
+    }
 }

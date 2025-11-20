@@ -91,6 +91,32 @@ public class ReviewService {
                 .toList();
     }
 
+    // ✅ Cập nhật review
+    @Transactional
+    public ReviewResponse updateReview(Long id, ReviewRequest request) {
+        Review review = reviewRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Review not found with id " + id));
+
+        // Chỉ cập nhật rating và comment, không thay đổi user và book
+        review.setRating(request.getRating());
+        review.setComment(request.getComment());
+        
+        review = reviewRepository.save(review);
+        
+        // Đảm bảo lazy relationships được load trong transaction
+        loadLazyRelationships(review);
+        return ReviewMapper.toResponse(review);
+    }
+
+    // ✅ Xóa review
+    @Transactional
+    public void deleteReview(Long id) {
+        if (!reviewRepository.existsById(id)) {
+            throw new RuntimeException("Review not found with id " + id);
+        }
+        reviewRepository.deleteById(id);
+    }
+
     /**
      * Đảm bảo lazy relationships được load trong transaction
      */

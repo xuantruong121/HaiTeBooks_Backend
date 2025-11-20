@@ -96,7 +96,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/cart/**").authenticated()
                         .requestMatchers("/api/favorites/**").authenticated()
 
-                        // Reviews (POST/PUT/DELETE require login)
+                        // Reviews - GET is public, POST/PUT/DELETE require authentication
                         .requestMatchers(HttpMethod.POST, "/api/reviews/**").authenticated()
                         .requestMatchers(HttpMethod.PUT, "/api/reviews/**").authenticated()
                         .requestMatchers(HttpMethod.DELETE, "/api/reviews/**").authenticated()
