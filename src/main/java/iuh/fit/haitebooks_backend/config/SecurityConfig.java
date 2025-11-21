@@ -61,7 +61,7 @@ public class SecurityConfig {
                         // AI endpoints - search và recommend sách tương tự là public
                         .requestMatchers(HttpMethod.GET, "/api/ai/search").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/ai/recommend/**").permitAll()
-                        // Chatbot - public để khách hàng có thể sử dụng
+                        // Chatbot - public để khách hàng có thể sử dụng (có thể nhận authentication optional để lấy thông tin đơn hàng)
                         .requestMatchers(HttpMethod.POST, "/api/ai/chat").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/books/barcode/**").permitAll()
 
@@ -144,7 +144,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/users/all").hasRole("ADMIN")
                         .requestMatchers("/api/users/{id}").hasRole("ADMIN")
 
-                        // AI - POST requires ADMIN (trừ /api/ai/chat đã được permitAll ở trên)
+                        // AI - POST requires ADMIN (trừ /api/ai/chat đã được permitAll() ở trên - dòng 65)
+                        // Lưu ý: /api/ai/chat được permitAll() nhưng vẫn có thể nhận authentication optional
                         .requestMatchers(HttpMethod.POST, "/api/ai/**").hasRole("ADMIN")
 
                         /* ================= DEFAULT ================= */

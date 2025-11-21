@@ -1,9 +1,11 @@
 package iuh.fit.haitebooks_backend.ai.service;
 
 import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
+import iuh.fit.haitebooks_backend.dtos.response.OrderResponse;
 import iuh.fit.haitebooks_backend.mapper.BookMapper;
 import iuh.fit.haitebooks_backend.model.Book;
 import iuh.fit.haitebooks_backend.repository.BookRepository;
+import iuh.fit.haitebooks_backend.service.OrderService;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -30,6 +32,7 @@ public class ChatbotService {
     private final RestTemplate restTemplate = new RestTemplate();
     private final BookRepository bookRepository;
     private final CohereEmbeddingService embeddingService;
+    private final OrderService orderService;
 
     // System prompt cho chatbot
     private static final String SYSTEM_PROMPT = """
@@ -38,21 +41,34 @@ public class ChatbotService {
         1. Trả lời câu hỏi về sách, tác giả, thể loại
         2. Gợi ý sách phù hợp với nhu cầu khách hàng
         3. Hỗ trợ thông tin về đơn hàng, thanh toán, giao hàng
-        4. Trả lời bằng tiếng Việt một cách tự nhiên và thân thiện
+        4. Trả lời câu hỏi về đơn hàng của khách hàng (nếu họ đã đăng nhập)
+        5. Trả lời bằng tiếng Việt một cách tự nhiên và thân thiện
+        
+        Khi khách hàng hỏi về đơn hàng, bạn có thể:
+        - Liệt kê các đơn hàng của họ
+        - Cho biết trạng thái đơn hàng (PENDING, PROCESSING, SHIPPING, COMPLETED, CANCELLED)
+        - Cho biết thông tin chi tiết về đơn hàng (sách đã mua, tổng tiền, ngày đặt)
+        - Trả lời về địa chỉ giao hàng và ghi chú
         
         Nếu bạn không biết câu trả lời, hãy thành thật nói rằng bạn không chắc chắn và đề nghị khách hàng liên hệ bộ phận hỗ trợ.
         """;
 
-    public ChatbotService(BookRepository bookRepository, CohereEmbeddingService embeddingService) {
+    public ChatbotService(BookRepository bookRepository, 
+                         CohereEmbeddingService embeddingService,
+                         OrderService orderService) {
         this.bookRepository = bookRepository;
         this.embeddingService = embeddingService;
+        this.orderService = orderService;
     }
 
     /**
      * Xử lý tin nhắn từ khách hàng và trả lời
+     * @param userMessage Tin nhắn từ khách hàng
+     * @param conversationId ID cuộc hội thoại (optional)
+     * @param userId ID của user (optional - nếu đã đăng nhập)
      */
-    public Map<String, Object> chat(String userMessage, String conversationId) {
-        log.info("💬 Nhận tin nhắn từ user: {}", userMessage);
+    public Map<String, Object> chat(String userMessage, String conversationId, Long userId) {
+        log.info("💬 Nhận tin nhắn từ user: {} (userId: {})", userMessage, userId);
 
         try {
             // 1. Tìm kiếm sách liên quan (RAG)
@@ -60,21 +76,34 @@ public class ChatbotService {
             log.info("📚 Tìm thấy {} sách liên quan", relevantBooks.size());
 
             // 2. Tạo context từ thông tin sách
-            String context = buildContextFromBooks(relevantBooks);
+            String bookContext = buildContextFromBooks(relevantBooks);
 
-            // 3. Gọi Cohere Chat API
+            // 3. Lấy thông tin đơn hàng nếu user đã đăng nhập
+            String orderContext = "";
+            if (userId != null) {
+                orderContext = buildOrderContext(userId, userMessage);
+                log.info("📦 Đã lấy thông tin đơn hàng cho user {}", userId);
+            }
+
+            // 4. Kết hợp context
+            String context = bookContext;
+            if (!orderContext.isEmpty()) {
+                context += "\n\n" + orderContext;
+            }
+
+            // 5. Gọi Cohere Chat API
             String aiResponse = callCohereChatAPI(userMessage, context);
 
-            // 4. Trích xuất tên sách được đề xuất từ response
+            // 6. Trích xuất tên sách được đề xuất từ response
             List<String> suggestedBooks = extractBookNames(aiResponse, relevantBooks);
 
-            // 5. Tạo sources (danh sách sách được tham khảo)
+            // 7. Tạo sources (danh sách sách được tham khảo)
             List<String> sources = relevantBooks.stream()
                     .limit(3) // Chỉ lấy 3 sách đầu tiên
                     .map(Book::getTitle)
                     .collect(Collectors.toList());
 
-            // 6. Tạo response
+            // 8. Tạo response
             Map<String, Object> response = new HashMap<>();
             response.put("response", aiResponse);
             response.put("suggestedBooks", suggestedBooks);
@@ -289,6 +318,81 @@ public class ChatbotService {
         }
         
         return "Xin lỗi, hệ thống đang gặp sự cố. Vui lòng liên hệ bộ phận hỗ trợ.";
+    }
+
+    /**
+     * Xây dựng context từ thông tin đơn hàng của user
+     * Chỉ lấy khi user hỏi về đơn hàng hoặc luôn luôn lấy để chatbot có context
+     */
+    private String buildOrderContext(Long userId, String userMessage) {
+        try {
+            // Kiểm tra xem user có hỏi về đơn hàng không
+            String lowerMessage = userMessage.toLowerCase();
+            boolean askingAboutOrder = lowerMessage.contains("đơn hàng") || 
+                                     lowerMessage.contains("order") ||
+                                     lowerMessage.contains("mua") ||
+                                     lowerMessage.contains("đã mua") ||
+                                     lowerMessage.contains("trạng thái") ||
+                                     lowerMessage.contains("status") ||
+                                     lowerMessage.contains("giao hàng") ||
+                                     lowerMessage.contains("shipping");
+
+            // Lấy danh sách đơn hàng
+            List<OrderResponse> orders = orderService.findByUser(userId);
+            
+            if (orders.isEmpty()) {
+                if (askingAboutOrder) {
+                    return "Khách hàng chưa có đơn hàng nào trong hệ thống.";
+                }
+                return ""; // Không trả về gì nếu không hỏi và không có đơn hàng
+            }
+
+            StringBuilder context = new StringBuilder("Thông tin đơn hàng của khách hàng:\n\n");
+            context.append(String.format("Tổng số đơn hàng: %d\n\n", orders.size()));
+
+            // Chỉ lấy 5 đơn hàng gần nhất để không quá dài
+            List<OrderResponse> recentOrders = orders.stream()
+                    .sorted((a, b) -> b.getOrderDate().compareTo(a.getOrderDate()))
+                    .limit(5)
+                    .collect(Collectors.toList());
+
+            for (OrderResponse order : recentOrders) {
+                context.append(String.format(
+                    "📦 Đơn hàng #%d:\n" +
+                    "  - Ngày đặt: %s\n" +
+                    "  - Trạng thái: %s\n" +
+                    "  - Tổng tiền: %.0f VNĐ\n" +
+                    "  - Phương thức thanh toán: %s\n",
+                    order.getId(),
+                    order.getOrderDate().toString(),
+                    order.getStatus(),
+                    order.getTotal(),
+                    order.getPaymentMethod() != null ? order.getPaymentMethod() : "CASH"
+                ));
+
+                if (order.getAddress() != null && !order.getAddress().isEmpty()) {
+                    context.append(String.format("  - Địa chỉ giao hàng: %s\n", order.getAddress()));
+                }
+
+                if (order.getItems() != null && !order.getItems().isEmpty()) {
+                    context.append("  - Sách đã mua:\n");
+                    for (var item : order.getItems()) {
+                        context.append(String.format("    • %s (x%d) - %.0f VNĐ\n", 
+                            item.getBookTitle(), 
+                            item.getQuantity(), 
+                            item.getPrice()));
+                    }
+                }
+
+                context.append("\n");
+            }
+
+            return context.toString();
+
+        } catch (Exception e) {
+            log.error("❌ Lỗi khi lấy thông tin đơn hàng: {}", e.getMessage());
+            return ""; // Trả về empty nếu có lỗi
+        }
     }
 }
 

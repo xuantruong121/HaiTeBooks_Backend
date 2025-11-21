@@ -147,19 +147,35 @@ public class AIController {
 
     /**
      * Chatbot hỗ trợ khách hàng
-     * Sử dụng RAG (Retrieval-Augmented Generation) với dữ liệu sách
+     * Sử dụng RAG (Retrieval-Augmented Generation) với dữ liệu sách và đơn hàng
      * 
      * @param request ChatRequest chứa message và conversationId (optional)
+     * @param userDetails User hiện tại từ authentication (optional - nếu đã đăng nhập)
      * @return ChatResponse với câu trả lời từ AI và danh sách sách được đề xuất
      */
     @PostMapping("/chat")
-    public ResponseEntity<ChatResponse> chat(@RequestBody @jakarta.validation.Valid ChatRequest request) {
+    public ResponseEntity<ChatResponse> chat(
+            @RequestBody @jakarta.validation.Valid ChatRequest request,
+            @AuthenticationPrincipal org.springframework.security.core.userdetails.UserDetails userDetails) {
         log.info("💬 Nhận yêu cầu chat: {}", request.getMessage());
         
         try {
+            // Lấy userId từ authentication nếu có
+            Long userId = null;
+            if (userDetails != null) {
+                try {
+                    var userResponse = userService.getByUsername(userDetails.getUsername());
+                    userId = userResponse.getId();
+                    log.info("🔐 Lấy userId từ authentication: {}", userId);
+                } catch (Exception e) {
+                    log.warn("⚠️ Không thể lấy userId từ authentication: {}", e.getMessage());
+                }
+            }
+            
             Map<String, Object> result = chatbotService.chat(
                 request.getMessage(), 
-                request.getConversationId()
+                request.getConversationId(),
+                userId
             );
             
             ChatResponse response = new ChatResponse(
