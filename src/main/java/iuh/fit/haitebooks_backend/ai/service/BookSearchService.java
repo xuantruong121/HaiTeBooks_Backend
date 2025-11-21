@@ -19,7 +19,16 @@ public class BookSearchService {
 
     private static final Logger log = LoggerFactory.getLogger(BookSearchService.class);
     private static final int DEFAULT_LIMIT = 10;
-    private static final double MIN_SIMILARITY_THRESHOLD = 0.3; // Ngưỡng tối thiểu để trả về kết quả
+    private static final double MIN_SIMILARITY_THRESHOLD = 0.2; // Giảm ngưỡng để không bỏ sót kết quả
+    
+    // Trọng số cho hybrid search
+    private static final double SEMANTIC_WEIGHT = 0.6; // 60% cho semantic similarity
+    private static final double TEXT_MATCH_WEIGHT = 0.4; // 40% cho text matching
+    
+    // Boost factors
+    private static final double TITLE_EXACT_MATCH_BOOST = 0.3; // Boost khi query xuất hiện trong title
+    private static final double TITLE_PARTIAL_MATCH_BOOST = 0.15; // Boost khi từ khóa xuất hiện trong title
+    private static final double DESCRIPTION_MATCH_BOOST = 0.1; // Boost khi query xuất hiện trong description
 
     private final BookRepository bookRepository;
     private final BookEmbeddingRepository embeddingRepository;
@@ -93,21 +102,54 @@ public class BookSearchService {
                 return List.of();
             }
 
-            // 4. Tính cosine similarity với query
-            Map<Book, Double> similarityMap = new HashMap<>();
+            // 4. Tính hybrid score: kết hợp semantic similarity + text matching
+            Map<Book, Double> scoreMap = new HashMap<>();
+            String queryLower = query.trim().toLowerCase();
+            String[] queryWords = queryLower.split("\\s+");
+            
             for (Map.Entry<Book, List<Double>> entry : bookVectors.entrySet()) {
-                double score = cosineSimilarity(queryVector, entry.getValue());
-                if (score >= MIN_SIMILARITY_THRESHOLD) {
-                    similarityMap.put(entry.getKey(), score);
+                Book book = entry.getKey();
+                List<Double> bookVector = entry.getValue();
+                
+                // 4.1. Tính semantic similarity (0.0 - 1.0)
+                double semanticScore = cosineSimilarity(queryVector, bookVector);
+                
+                // 4.2. Tính text matching score (0.0 - 1.0)
+                double textScore = calculateTextMatchScore(book, queryLower, queryWords);
+                
+                // 4.3. Tính hybrid score (kết hợp semantic + text matching)
+                double hybridScore = (semanticScore * SEMANTIC_WEIGHT) + (textScore * TEXT_MATCH_WEIGHT);
+                
+                // 4.4. Áp dụng boost cho exact/partial matches
+                double boostedScore = applyBoosts(book, queryLower, queryWords, hybridScore);
+                
+                // Chỉ thêm vào kết quả nếu score >= ngưỡng tối thiểu
+                if (boostedScore >= MIN_SIMILARITY_THRESHOLD) {
+                    scoreMap.put(book, boostedScore);
+                    
+                    // Log chi tiết cho top results để debug
+                    if (scoreMap.size() <= 5) {
+                        log.debug("📊 Book: '{}' | Semantic: {:.3f} | Text: {:.3f} | Hybrid: {:.3f} | Final: {:.3f}", 
+                                book.getTitle(), semanticScore, textScore, hybridScore, boostedScore);
+                    }
                 }
             }
 
             // 5. Sắp xếp và lấy top kết quả
-            List<Book> topBooks = similarityMap.entrySet().stream()
+            List<Book> topBooks = scoreMap.entrySet().stream()
                     .sorted(Map.Entry.<Book, Double>comparingByValue().reversed())
                     .limit(resultLimit)
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
+            
+            // Log top 3 scores để debug
+            if (!scoreMap.isEmpty()) {
+                log.info("🏆 Top 3 scores:");
+                scoreMap.entrySet().stream()
+                        .sorted(Map.Entry.<Book, Double>comparingByValue().reversed())
+                        .limit(3)
+                        .forEach(entry -> log.info("   - '{}': {:.4f}", entry.getKey().getTitle(), entry.getValue()));
+            }
 
             // 6. Map sang BookResponse và đảm bảo category được load
             List<BookResponse> results = topBooks.stream()
@@ -160,5 +202,108 @@ public class BookSearchService {
         }
 
         return dot / (denominator + 1e-10); // Thêm epsilon để tránh chia cho 0
+    }
+    
+    /**
+     * Tính text matching score dựa trên việc query xuất hiện trong title/description
+     * @param book Sách cần tính điểm
+     * @param queryLower Query đã chuyển thành lowercase
+     * @param queryWords Mảng các từ trong query
+     * @return Điểm số từ 0.0 đến 1.0
+     */
+    private double calculateTextMatchScore(Book book, String queryLower, String[] queryWords) {
+        double score = 0.0;
+        
+        String title = (book.getTitle() != null) ? book.getTitle().toLowerCase() : "";
+        String description = (book.getDescription() != null) ? book.getDescription().toLowerCase() : "";
+        String author = (book.getAuthor() != null) ? book.getAuthor().toLowerCase() : "";
+        
+        // 1. Exact match trong title (quan trọng nhất)
+        if (title.contains(queryLower)) {
+            score += 0.8; // Rất cao nếu query xuất hiện chính xác trong title
+        }
+        
+        // 2. Tất cả từ khóa xuất hiện trong title
+        boolean allWordsInTitle = true;
+        int wordsInTitle = 0;
+        for (String word : queryWords) {
+            if (title.contains(word)) {
+                wordsInTitle++;
+            } else {
+                allWordsInTitle = false;
+            }
+        }
+        if (allWordsInTitle && queryWords.length > 0) {
+            score += 0.6; // Tất cả từ khóa có trong title
+        } else if (wordsInTitle > 0) {
+            score += (wordsInTitle * 0.2) / queryWords.length; // Một phần từ khóa có trong title
+        }
+        
+        // 3. Exact match trong description
+        if (description.contains(queryLower)) {
+            score += 0.3;
+        }
+        
+        // 4. Từ khóa xuất hiện trong description
+        int wordsInDescription = 0;
+        for (String word : queryWords) {
+            if (description.contains(word)) {
+                wordsInDescription++;
+            }
+        }
+        if (wordsInDescription > 0) {
+            score += (wordsInDescription * 0.15) / queryWords.length;
+        }
+        
+        // 5. Từ khóa xuất hiện trong author (ít quan trọng hơn)
+        for (String word : queryWords) {
+            if (author.contains(word)) {
+                score += 0.05;
+                break; // Chỉ cộng 1 lần
+            }
+        }
+        
+        // Normalize về 0.0 - 1.0
+        return Math.min(score, 1.0);
+    }
+    
+    /**
+     * Áp dụng boost cho exact/partial matches
+     * @param book Sách cần boost
+     * @param queryLower Query đã chuyển thành lowercase
+     * @param queryWords Mảng các từ trong query
+     * @param baseScore Điểm số cơ bản
+     * @return Điểm số sau khi boost
+     */
+    private double applyBoosts(Book book, String queryLower, String[] queryWords, double baseScore) {
+        double boostedScore = baseScore;
+        
+        String title = (book.getTitle() != null) ? book.getTitle().toLowerCase() : "";
+        String description = (book.getDescription() != null) ? book.getDescription().toLowerCase() : "";
+        
+        // Boost 1: Exact match trong title (rất quan trọng)
+        if (title.contains(queryLower)) {
+            boostedScore += TITLE_EXACT_MATCH_BOOST;
+        }
+        
+        // Boost 2: Tất cả từ khóa có trong title
+        boolean allWordsInTitle = true;
+        for (String word : queryWords) {
+            if (!title.contains(word)) {
+                allWordsInTitle = false;
+                break;
+            }
+        }
+        if (allWordsInTitle && queryWords.length > 0) {
+            boostedScore += TITLE_PARTIAL_MATCH_BOOST;
+        }
+        
+        // Boost 3: Query xuất hiện trong description
+        if (description.contains(queryLower)) {
+            boostedScore += DESCRIPTION_MATCH_BOOST;
+        }
+        
+        // Đảm bảo không vượt quá 1.0
+        return Math.min(boostedScore, 1.0);
     }
 }
