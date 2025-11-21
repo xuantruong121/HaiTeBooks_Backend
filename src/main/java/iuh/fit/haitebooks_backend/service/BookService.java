@@ -27,13 +27,16 @@ public class BookService {
     private final BookRepository bookRepository;
     private final CategoryRepository categoryRepository;
     private final EmbeddingAsyncService embeddingAsyncService;
+    private final CloudinaryService cloudinaryService;
 
     public BookService(BookRepository bookRepository, 
                       CategoryRepository categoryRepository,
-                      EmbeddingAsyncService embeddingAsyncService) {
+                      EmbeddingAsyncService embeddingAsyncService,
+                      CloudinaryService cloudinaryService) {
         this.bookRepository = bookRepository;
         this.categoryRepository = categoryRepository;
         this.embeddingAsyncService = embeddingAsyncService;
+        this.cloudinaryService = cloudinaryService;
     }
 
     @Transactional(readOnly = true)
@@ -105,8 +108,22 @@ public class BookService {
         BookCategory category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new NotFoundException("Category not found with id " + request.getCategoryId()));
 
+        // ✅ Lưu ảnh cũ trước khi update
+        String oldImageUrl = book.getImageUrl();
+        
         BookMapper.updateBookFromRequest(book, request, category);
         book = bookRepository.save(book);
+        
+        // ✅ Xóa ảnh cũ từ Cloudinary nếu có ảnh mới và ảnh cũ là Cloudinary URL
+        if (oldImageUrl != null && !oldImageUrl.equals(book.getImageUrl()) && 
+            oldImageUrl.contains("cloudinary.com")) {
+            try {
+                cloudinaryService.deleteImage(oldImageUrl);
+                log.info("✅ Đã xóa ảnh cũ từ Cloudinary: {}", oldImageUrl);
+            } catch (Exception e) {
+                log.warn("⚠️ Không thể xóa ảnh cũ từ Cloudinary: {}", e.getMessage());
+            }
+        }
         
         // Category đã được set trực tiếp trong updateBookFromRequest, không cần trigger load
         return BookMapper.toBookResponse(book);
@@ -117,6 +134,17 @@ public class BookService {
         // Tối ưu: Dùng findById().orElseThrow() để tránh 2 queries
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Book not found with id " + id));
+        
+        // ✅ Xóa ảnh từ Cloudinary trước khi xóa sách
+        if (book.getImageUrl() != null && book.getImageUrl().contains("cloudinary.com")) {
+            try {
+                cloudinaryService.deleteImage(book.getImageUrl());
+                log.info("✅ Đã xóa ảnh từ Cloudinary: {}", book.getImageUrl());
+            } catch (Exception e) {
+                log.warn("⚠️ Không thể xóa ảnh từ Cloudinary: {}", e.getMessage());
+            }
+        }
+        
         bookRepository.delete(book);
     }
 

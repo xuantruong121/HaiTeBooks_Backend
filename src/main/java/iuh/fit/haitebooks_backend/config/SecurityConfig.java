@@ -112,6 +112,9 @@ public class SecurityConfig {
                         // Notifications
                         .requestMatchers("/api/notifications/**").authenticated()
 
+                        // Upload endpoints - cần authentication (chỉ user đã đăng nhập mới được upload)
+                        .requestMatchers("/api/upload/**").authenticated()
+
                         /* ================= PROMOTIONS ================= */
 
                         // ✔ USER chỉ được validate và xem
