@@ -13,6 +13,8 @@ import java.util.Optional;
 @Repository
 public interface BookRepository extends JpaRepository<Book, Long> {
 
+    // ✅ Tối ưu: Eager fetch category khi tìm theo barcode
+    @EntityGraph(attributePaths = {"category"})
     Optional<Book> findByBarcode(String barcode);
 
     // ✅ Tìm kiếm theo tiêu đề (có hỗ trợ phân trang)
@@ -22,4 +24,14 @@ public interface BookRepository extends JpaRepository<Book, Long> {
     @EntityGraph(attributePaths = {"category"})
     @Override
     List<Book> findAll();
+    
+    // ✅ Tối ưu: Eager fetch category khi lấy sách có phân trang
+    @EntityGraph(attributePaths = {"category"})
+    @Override
+    Page<Book> findAll(Pageable pageable);
+    
+    // ✅ Tối ưu: Eager fetch category khi tìm theo ID
+    @EntityGraph(attributePaths = {"category"})
+    @Override
+    Optional<Book> findById(Long id);
 }

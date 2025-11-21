@@ -53,15 +53,9 @@ public class BookService {
                 ? bookRepository.findByTitleContainingIgnoreCase(keyword, pageable)
                 : bookRepository.findAll(pageable);
         
-        // Map trong transaction để đảm bảo lazy relationships được load
+        // Với @EntityGraph trong repository, category đã được eager fetch
         List<BookResponse> responses = booksPage.getContent().stream()
-                .map(book -> {
-                    // Đảm bảo category được load trong transaction
-                    if (book.getCategory() != null) {
-                        book.getCategory().getName();
-                    }
-                    return BookMapper.toBookResponse(book);
-                })
+                .map(BookMapper::toBookResponse)
                 .collect(Collectors.toList());
         
         return new PageImpl<>(responses, pageable, booksPage.getTotalElements());
@@ -69,13 +63,9 @@ public class BookService {
 
     @Transactional(readOnly = true)
     public BookResponse findByBarcode(String barcode) {
+        // Với @EntityGraph trong repository, category đã được eager fetch
         Book book = bookRepository.findByBarcode(barcode).orElse(null);
         if (book == null) return null;
-        
-        // Đảm bảo category được load trong transaction
-        if (book.getCategory() != null) {
-            book.getCategory().getName();
-        }
         return BookMapper.toBookResponse(book);
     }
 
@@ -93,11 +83,7 @@ public class BookService {
 
         book = bookRepository.save(book);
         
-        // Đảm bảo category được load trong transaction
-        if (book.getCategory() != null) {
-            book.getCategory().getName();
-        }
-
+        // Category đã được set trực tiếp, không cần trigger load
         // ✅ Tự động tạo embedding cho sách mới (chạy async để không block response)
         embeddingAsyncService.generateEmbeddingForBookAsync(book);
 
@@ -106,13 +92,9 @@ public class BookService {
 
     @Transactional(readOnly = true)
     public BookResponse getBookById(Long id) {
+        // Với @EntityGraph trong repository, category đã được eager fetch
         Book book = bookRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Book not found with id " + id));
-        
-        // Đảm bảo category được load trong transaction
-        if (book.getCategory() != null) {
-            book.getCategory().getName();
-        }
         return BookMapper.toBookResponse(book);
     }
 
@@ -126,19 +108,16 @@ public class BookService {
         BookMapper.updateBookFromRequest(book, request, category);
         book = bookRepository.save(book);
         
-        // Đảm bảo category được load trong transaction
-        if (book.getCategory() != null) {
-            book.getCategory().getName();
-        }
+        // Category đã được set trực tiếp trong updateBookFromRequest, không cần trigger load
         return BookMapper.toBookResponse(book);
     }
 
     @Transactional
     public void deleteBook(Long id) {
-        if (!bookRepository.existsById(id)) {
-            throw new NotFoundException("Book not found with id " + id);
-        }
-        bookRepository.deleteById(id);
+        // Tối ưu: Dùng findById().orElseThrow() để tránh 2 queries
+        Book book = bookRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Book not found with id " + id));
+        bookRepository.delete(book);
     }
 
     // 🧮 Sinh mã barcode chuẩn EAN-13 (13 số, có checksum)

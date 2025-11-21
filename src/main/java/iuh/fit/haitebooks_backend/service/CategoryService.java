@@ -64,12 +64,11 @@ public class CategoryService {
         return categoryRepository.save(category);
     }
 
-    // ✅ Xóa
+    // ✅ Xóa - Tối ưu: Dùng findById().orElseThrow() để tránh 2 queries
     @Transactional
     public void deleteCategory(Long id) {
-        if (!categoryRepository.existsById(id)) {
-            throw new NotFoundException("Category not found with id " + id);
-        }
-        categoryRepository.deleteById(id);
+        BookCategory category = categoryRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Category not found with id " + id));
+        categoryRepository.delete(category);
     }
 }

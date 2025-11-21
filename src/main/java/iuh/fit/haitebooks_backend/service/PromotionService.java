@@ -135,17 +135,6 @@ public class PromotionService {
                 .toList();
     }
 
-    /**
-     * Đảm bảo lazy relationships được load trong transaction
-     */
-    private void loadLazyRelationships(Promotion promotion) {
-        if (promotion.getCreatedBy() != null) {
-            promotion.getCreatedBy().getId();
-        }
-        if (promotion.getApprovedBy() != null) {
-            promotion.getApprovedBy().getId();
-        }
-    }
 
     // ---------------------------------------
     // 🔥 LOG Saver

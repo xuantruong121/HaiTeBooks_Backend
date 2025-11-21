@@ -34,13 +34,10 @@ public class CartService {
 
     @Transactional(readOnly = true)
     public List<CartResponse> getCartByUser(Long userId) {
+        // Với @EntityGraph trong repository, book và user đã được eager fetch
         List<Cart> carts = cartRepository.findByUserId(userId);
-        // Map trong transaction để đảm bảo lazy relationships được load
         return carts.stream()
-                .map(cart -> {
-                    loadLazyRelationships(cart);
-                    return CartMapper.toResponse(cart);
-                })
+                .map(CartMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -66,39 +63,18 @@ public class CartService {
 
         cart = cartRepository.save(cart);
         
-        // Đảm bảo lazy relationships được load trong transaction
-        loadLazyRelationships(cart);
+        // Với @EntityGraph trong repository, book và user đã được eager fetch khi save
         return CartMapper.toResponse(cart);
     }
 
     @Transactional
     public CartResponse updateQuantity(Long id, int quantity) {
+        // Với @EntityGraph trong repository, book và user đã được eager fetch
         Cart cart = cartRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Cart item not found with id: " + id));
         cart.setQuantity(quantity);
         cart = cartRepository.save(cart);
-        
-        // Đảm bảo lazy relationships được load trong transaction
-        loadLazyRelationships(cart);
         return CartMapper.toResponse(cart);
-    }
-
-    /**
-     * Đảm bảo lazy relationships được load trong transaction
-     * Với @EntityGraph trong repository, các relationships đã được eager fetch
-     * Nhưng vẫn trigger load để đảm bảo an toàn
-     */
-    private void loadLazyRelationships(Cart cart) {
-        if (cart.getUser() != null) {
-            cart.getUser().getId();
-        }
-        if (cart.getBook() != null) {
-            cart.getBook().getId();
-            // CartResponse chỉ cần bookId, không cần các field khác của Book
-            // Nếu sau này cần thêm thông tin Book vào CartResponse, uncomment:
-            // cart.getBook().getTitle();
-            // cart.getBook().getPrice();
-        }
     }
 
     @Transactional

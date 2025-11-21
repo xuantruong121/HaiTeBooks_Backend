@@ -35,13 +35,10 @@ public class UserService {
     // ✅ Lấy tất cả người dùng
     @Transactional(readOnly = true)
     public List<UserResponse> getAllUsers() {
+        // Role đã là EAGER trong entity, không cần trigger load
         List<User> users = userRepository.findAll();
-        // Map trong transaction để đảm bảo lazy relationships được load
         return users.stream()
-                .map(user -> {
-                    loadLazyRelationships(user);
-                    return UserMapper.toResponse(user);
-                })
+                .map(UserMapper::toResponse)
                 .collect(Collectors.toList());
     }
 
@@ -71,11 +68,9 @@ public class UserService {
     // ✅ Lấy người dùng theo ID
     @Transactional(readOnly = true)
     public UserResponse getUserById(Long id) {
+        // Role đã là EAGER trong entity, không cần trigger load
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("User not found with id " + id));
-        
-        // Đảm bảo lazy relationships được load trong transaction
-        loadLazyRelationships(user);
         return UserMapper.toResponse(user);
     }
 
@@ -96,8 +91,7 @@ public class UserService {
         User user = UserMapper.toEntity(request, role, encodedPassword);
         user = userRepository.save(user);
         
-        // Đảm bảo lazy relationships được load trong transaction
-        loadLazyRelationships(user);
+        // Role đã được set trực tiếp, không cần trigger load
         return UserMapper.toResponse(user);
     }
 
@@ -134,28 +128,24 @@ public class UserService {
         UserMapper.updateEntity(existing, request, role, encodedPassword);
         existing = userRepository.save(existing);
         
-        // Đảm bảo lazy relationships được load trong transaction
-        loadLazyRelationships(existing);
+        // Role đã là EAGER trong entity, không cần trigger load
         return UserMapper.toResponse(existing);
     }
 
-    // ✅ Xóa người dùng
+    // ✅ Xóa người dùng - Tối ưu: Dùng findById().orElseThrow() để tránh 2 queries
     @Transactional
     public void deleteUser(Long id) {
-        if (!userRepository.existsById(id)) {
-            throw new NotFoundException("User not found with id " + id);
-        }
-        userRepository.deleteById(id);
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found with id " + id));
+        userRepository.delete(user);
     }
 
     // ✅ Lấy người dùng theo username (dùng cho /me)
     @Transactional(readOnly = true)
     public UserResponse getByUsername(String username) {
+        // Role đã là EAGER trong entity, không cần trigger load
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new NotFoundException("User not found: " + username));
-        
-        // Đảm bảo lazy relationships được load trong transaction
-        loadLazyRelationships(user);
         return UserMapper.toResponse(user);
     }
 
@@ -197,12 +187,4 @@ public class UserService {
         userRepository.save(user);
     }
 
-    /**
-     * Đảm bảo lazy relationships được load trong transaction
-     */
-    private void loadLazyRelationships(User user) {
-        if (user.getRole() != null) {
-            user.getRole().getName();
-        }
-    }
 }

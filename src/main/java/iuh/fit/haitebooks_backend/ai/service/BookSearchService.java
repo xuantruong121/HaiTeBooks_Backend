@@ -151,15 +151,9 @@ public class BookSearchService {
                         .forEach(entry -> log.info("   - '{}': {:.4f}", entry.getKey().getTitle(), entry.getValue()));
             }
 
-            // 6. Map sang BookResponse và đảm bảo category được load
+            // 6. Map sang BookResponse - category đã được eager fetch bởi @EntityGraph
             List<BookResponse> results = topBooks.stream()
-                    .map(book -> {
-                        // Đảm bảo category được load trong transaction
-                        if (book.getCategory() != null) {
-                            book.getCategory().getName();
-                        }
-                        return BookMapper.toBookResponse(book);
-                    })
+                    .map(BookMapper::toBookResponse)
                     .collect(Collectors.toList());
 
             log.info("✅ Tìm thấy {} kết quả cho query: '{}'", results.size(), query);

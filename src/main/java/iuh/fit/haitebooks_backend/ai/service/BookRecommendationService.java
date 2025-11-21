@@ -118,15 +118,9 @@ public class BookRecommendationService {
                     .map(Map.Entry::getKey)
                     .collect(Collectors.toList());
 
-            // 5. Map sang BookResponse và đảm bảo category được load
+            // 5. Map sang BookResponse - category đã được eager fetch bởi @EntityGraph
             List<BookResponse> results = topBooks.stream()
-                    .map(book -> {
-                        // Đảm bảo category được load trong transaction
-                        if (book.getCategory() != null) {
-                            book.getCategory().getName();
-                        }
-                        return BookMapper.toBookResponse(book);
-                    })
+                    .map(BookMapper::toBookResponse)
                     .collect(Collectors.toList());
 
             log.info("✅ Đã gợi ý {} sách tương tự cho sách: {}", results.size(), target.getTitle());
@@ -189,23 +183,29 @@ public class BookRecommendationService {
                     (oldVal, newVal) -> oldVal + newVal); // Cộng dồn nếu có cả 2
             }
 
-            // 4. Sắp xếp và lấy top kết quả
-            List<Book> topBooks = hybridScores.entrySet().stream()
+            // 4. Sắp xếp và lấy top book IDs
+            List<Long> topBookIds = hybridScores.entrySet().stream()
                     .sorted(Map.Entry.<Long, Double>comparingByValue().reversed())
                     .limit(resultLimit)
-                    .map(entry -> bookRepository.findById(entry.getKey()))
-                    .filter(Optional::isPresent)
-                    .map(Optional::get)
+                    .map(Map.Entry::getKey)
+                    .collect(Collectors.toList());
+            
+            // ✅ Tối ưu: Query tất cả books một lần thay vì N queries
+            List<Book> allBooks = bookRepository.findAllById(topBookIds);
+            
+            // Tạo map để giữ thứ tự và lookup nhanh
+            Map<Long, Book> bookMap = allBooks.stream()
+                    .collect(Collectors.toMap(Book::getId, book -> book));
+            
+            // Sắp xếp lại theo thứ tự trong topBookIds để đảm bảo thứ tự đúng
+            List<Book> topBooks = topBookIds.stream()
+                    .map(bookMap::get)
+                    .filter(book -> book != null)
                     .collect(Collectors.toList());
 
-            // 5. Map sang BookResponse
+            // 5. Map sang BookResponse - category đã được eager fetch bởi @EntityGraph
             List<BookResponse> results = topBooks.stream()
-                    .map(book -> {
-                        if (book.getCategory() != null) {
-                            book.getCategory().getName();
-                        }
-                        return BookMapper.toBookResponse(book);
-                    })
+                    .map(BookMapper::toBookResponse)
                     .collect(Collectors.toList());
 
             log.info("✅ Đã gợi ý {} sách cho user {}", results.size(), userId);

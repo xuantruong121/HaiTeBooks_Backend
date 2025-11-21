@@ -75,16 +75,11 @@ public class NotificationService {
     // 🔥 Lấy thông báo chưa đọc theo userId
     @Transactional(readOnly = true)
     public List<NotificationResponse> getUnread(Long userId) {
+        // Với @EntityGraph trong repository, sender đã được eager fetch
         return notificationRepo
                 .findByReceiverIdAndIsReadFalseOrderByCreatedAtDesc(userId)
                 .stream()
-                .map(notification -> {
-                    // Đảm bảo lazy relationships được load trong transaction
-                    if (notification.getSender() != null) {
-                        notification.getSender().getFullName();
-                    }
-                    return NotificationMapper.toResponse(notification);
-                })
+                .map(NotificationMapper::toResponse)
                 .toList();
     }
 

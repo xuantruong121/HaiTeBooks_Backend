@@ -13,6 +13,11 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
     @Override
     List<Review> findAll();
     
+    // ✅ Tối ưu: Eager fetch book và user khi tìm theo ID
+    @EntityGraph(attributePaths = {"book", "user"})
+    @Override
+    java.util.Optional<Review> findById(Long id);
+    
     @EntityGraph(attributePaths = {"book", "user"})
     List<Review> findByUserId(Long userId);
     

@@ -2,6 +2,7 @@ package iuh.fit.haitebooks_backend.repository;
 
 import iuh.fit.haitebooks_backend.model.Notification;
 import iuh.fit.haitebooks_backend.model.User;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -17,6 +18,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     List<Notification> findByReceiverIdOrderByCreatedAtDesc(Long receiverId);
 
+    // ✅ Tối ưu: Eager fetch sender khi lấy notifications chưa đọc
+    @EntityGraph(attributePaths = {"sender"})
     List<Notification> findByReceiverIdAndIsReadFalseOrderByCreatedAtDesc(Long receiverId);
 
     void deleteByReceiverId(Long receiverId);

@@ -49,8 +49,7 @@ public class ReviewService {
         Review review = ReviewMapper.toEntity(request, user, book);
         review = reviewRepository.save(review);
         
-        // Đảm bảo lazy relationships được load trong transaction
-        loadLazyRelationships(review);
+        // User và book đã được set trực tiếp, không cần trigger load
         return ReviewMapper.toResponse(review);
     }
 
@@ -87,6 +86,7 @@ public class ReviewService {
     // ✅ Cập nhật review
     @Transactional
     public ReviewResponse updateReview(Long id, ReviewRequest request) {
+        // Với @EntityGraph trong repository, book và user đã được eager fetch
         Review review = reviewRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Review not found with id " + id));
 
@@ -95,32 +95,15 @@ public class ReviewService {
         review.setComment(request.getComment());
         
         review = reviewRepository.save(review);
-        
-        // Đảm bảo lazy relationships được load trong transaction
-        loadLazyRelationships(review);
         return ReviewMapper.toResponse(review);
     }
 
-    // ✅ Xóa review
+    // ✅ Xóa review - Tối ưu: Dùng findById().orElseThrow() để tránh 2 queries
     @Transactional
     public void deleteReview(Long id) {
-        if (!reviewRepository.existsById(id)) {
-            throw new NotFoundException("Review not found with id " + id);
-        }
-        reviewRepository.deleteById(id);
+        Review review = reviewRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Review not found with id " + id));
+        reviewRepository.delete(review);
     }
 
-    /**
-     * Đảm bảo lazy relationships được load trong transaction
-     */
-    private void loadLazyRelationships(Review review) {
-        if (review.getUser() != null) {
-            review.getUser().getId();
-            review.getUser().getFullName(); // Trigger load để lấy userName
-        }
-        if (review.getBook() != null) {
-            review.getBook().getId();
-            review.getBook().getTitle(); // Trigger load để lấy bookTitle
-        }
-    }
 }

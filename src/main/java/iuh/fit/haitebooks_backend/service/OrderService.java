@@ -157,21 +157,17 @@ public class OrderService {
         noti.setContent("Đơn #" + order.getId() + " đã được tạo.");
         notificationService.send(noti, null);
 
-        // Đảm bảo lazy relationships được load trong transaction
-        loadLazyRelationships(order);
+        // Với @EntityGraph trong repository, các relationships đã được eager fetch khi save
         return OrderMapper.toOrderResponse(order);
     }
 
     // ✅ Lấy tất cả đơn hàng
     @Transactional(readOnly = true)
     public List<OrderResponse> getAllOrders() {
+        // Với @EntityGraph trong repository, các relationships đã được eager fetch
         List<Order> orders = orderRepository.findAll();
-        // Map trong transaction để đảm bảo lazy relationships được load
         return orders.stream()
-                .map(order -> {
-                    loadLazyRelationships(order);
-                    return OrderMapper.toOrderResponse(order);
-                })
+                .map(OrderMapper::toOrderResponse)
                 .collect(Collectors.toList());
     }
 
@@ -179,36 +175,19 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<OrderResponse> findByUser(Long userId) {
         // Tối ưu: Bỏ existsById check, findByUserId sẽ trả về empty list nếu không có
-        // Nếu cần validate user, có thể check sau khi query
+        // Với @EntityGraph trong repository, các relationships đã được eager fetch
         List<Order> orders = orderRepository.findByUserId(userId);
-        
-        // Nếu không có orders và muốn validate user tồn tại, check sau
-        if (orders.isEmpty()) {
-            // Optional: Có thể bỏ check này nếu không cần validate user tồn tại
-            // Nếu cần validate, uncomment dòng dưới:
-            // if (!userRepository.existsById(userId)) {
-            //     throw new NotFoundException("User not found with id: " + userId);
-            // }
-        }
-        
-        // Map trong transaction để đảm bảo lazy relationships được load
-        // Với @EntityGraph, các relationships đã được eager fetch, nhưng vẫn cần trigger load để đảm bảo
         return orders.stream()
-                .map(order -> {
-                    loadLazyRelationships(order);
-                    return OrderMapper.toOrderResponse(order);
-                })
+                .map(OrderMapper::toOrderResponse)
                 .collect(Collectors.toList());
     }
 
     // ✅ Lấy đơn hàng theo ID
     @Transactional(readOnly = true)
     public OrderResponse getOrderById(Long id) {
+        // Với @EntityGraph trong repository, các relationships đã được eager fetch
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Order not found with id " + id));
-        
-        // Đảm bảo lazy relationships được load trong transaction
-        loadLazyRelationships(order);
         return OrderMapper.toOrderResponse(order);
     }
 
@@ -238,9 +217,7 @@ public class OrderService {
             order.setStatus(newStatus);
             Order saved = orderRepository.save(order);
 
-            // Đảm bảo lazy relationships được load trong transaction
-            loadLazyRelationships(saved);
-
+            // Với @EntityGraph trong repository, các relationships đã được eager fetch khi save
             // --- Gửi notification cho user của đơn hàng ---
             try {
                 Long receiverId = saved.getUser() != null ? saved.getUser().getId() : null;
@@ -284,45 +261,12 @@ public class OrderService {
         }
     }
 
-    // ✅ Xóa đơn hàng
+    // ✅ Xóa đơn hàng - Tối ưu: Dùng findById().orElseThrow() để tránh 2 queries
     @Transactional
     public void deleteOrder(Long id) {
-        if (!orderRepository.existsById(id)) {
-            throw new NotFoundException("Order not found with id " + id);
-        }
-        orderRepository.deleteById(id);
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Order not found with id " + id));
+        orderRepository.delete(order);
     }
 
-    /**
-     * Đảm bảo lazy relationships được load trong transaction
-     */
-    private void loadLazyRelationships(Order order) {
-        // Load user relationship
-        if (order.getUser() != null) {
-            order.getUser().getId();
-            order.getUser().getUsername();
-            order.getUser().getEmail();
-        }
-        
-        // Load order items và book relationships
-        if (order.getOrderItems() != null) {
-            order.getOrderItems().forEach(item -> {
-                if (item.getBook() != null) {
-                    item.getBook().getId();
-                    item.getBook().getTitle();
-                }
-            });
-        }
-        
-        // ✅ Thêm phần này để load appliedPromotion
-        if (order.getAppliedPromotion() != null) {
-            order.getAppliedPromotion().getId();
-            order.getAppliedPromotion().getCode();
-            order.getAppliedPromotion().getName();
-            order.getAppliedPromotion().getDiscountPercent();
-            order.getAppliedPromotion().getMinimumOrderAmount();
-            order.getAppliedPromotion().getMaxDiscountAmount();
-            // Load các field cần thiết khác nếu cần
-        }
-    }
 }
