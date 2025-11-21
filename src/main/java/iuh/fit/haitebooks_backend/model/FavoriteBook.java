@@ -32,5 +32,6 @@ public class FavoriteBook {
     private Book book;
 
     @Column(name = "created_at", nullable = false, updatable = false)
+    @Builder.Default
     private LocalDateTime createdAt = LocalDateTime.now();
 }

@@ -29,10 +29,12 @@ public class Payment {
     private double amount;
 
     @Column(name = "payment_date")
+    @Builder.Default
     private LocalDateTime paymentDate = LocalDateTime.now();
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status_payment", nullable = false)
+    @Builder.Default
     private Status_Payment status = Status_Payment.PENDING;
 
     // ===== Thông tin dành riêng cho VNPay =====

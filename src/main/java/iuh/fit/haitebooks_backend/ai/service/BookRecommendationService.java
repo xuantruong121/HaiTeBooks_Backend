@@ -4,6 +4,8 @@ import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
 import iuh.fit.haitebooks_backend.mapper.BookMapper;
 import iuh.fit.haitebooks_backend.model.Book;
 import iuh.fit.haitebooks_backend.model.BookEmbedding;
+import iuh.fit.haitebooks_backend.model.Order;
+import iuh.fit.haitebooks_backend.model.Order_Item;
 import iuh.fit.haitebooks_backend.repository.BookEmbeddingRepository;
 import iuh.fit.haitebooks_backend.repository.BookRepository;
 import iuh.fit.haitebooks_backend.repository.OrderRepository;
