@@ -165,11 +165,21 @@ public class OrderService {
     // ✅ Lấy đơn hàng theo user
     @Transactional(readOnly = true)
     public List<OrderResponse> findByUser(Long userId) {
-        if (!userRepository.existsById(userId)) {
-            throw new NotFoundException("User not found with id: " + userId);
-        }
+        // Tối ưu: Bỏ existsById check, findByUserId sẽ trả về empty list nếu không có
+        // Nếu cần validate user, có thể check sau khi query
         List<Order> orders = orderRepository.findByUserId(userId);
+        
+        // Nếu không có orders và muốn validate user tồn tại, check sau
+        if (orders.isEmpty()) {
+            // Optional: Có thể bỏ check này nếu không cần validate user tồn tại
+            // Nếu cần validate, uncomment dòng dưới:
+            // if (!userRepository.existsById(userId)) {
+            //     throw new NotFoundException("User not found with id: " + userId);
+            // }
+        }
+        
         // Map trong transaction để đảm bảo lazy relationships được load
+        // Với @EntityGraph, các relationships đã được eager fetch, nhưng vẫn cần trigger load để đảm bảo
         return orders.stream()
                 .map(order -> {
                     loadLazyRelationships(order);

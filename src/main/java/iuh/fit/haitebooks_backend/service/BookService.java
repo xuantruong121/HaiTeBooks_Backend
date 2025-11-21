@@ -38,16 +38,11 @@ public class BookService {
 
     @Transactional(readOnly = true)
     public List<BookResponse> getAllBooks() {
+        // Với @EntityGraph trong repository, category đã được eager fetch
         List<Book> books = bookRepository.findAll();
-        // Map trong transaction để đảm bảo lazy relationships được load
+        // Map trong transaction - category đã được load bởi @EntityGraph
         return books.stream()
-                .map(book -> {
-                    // Đảm bảo category được load trong transaction
-                    if (book.getCategory() != null) {
-                        book.getCategory().getName();
-                    }
-                    return BookMapper.toBookResponse(book);
-                })
+                .map(BookMapper::toBookResponse)
                 .collect(Collectors.toList());
     }
 

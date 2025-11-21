@@ -85,6 +85,8 @@ public class CartService {
 
     /**
      * Đảm bảo lazy relationships được load trong transaction
+     * Với @EntityGraph trong repository, các relationships đã được eager fetch
+     * Nhưng vẫn trigger load để đảm bảo an toàn
      */
     private void loadLazyRelationships(Cart cart) {
         if (cart.getUser() != null) {
@@ -92,6 +94,10 @@ public class CartService {
         }
         if (cart.getBook() != null) {
             cart.getBook().getId();
+            // CartResponse chỉ cần bookId, không cần các field khác của Book
+            // Nếu sau này cần thêm thông tin Book vào CartResponse, uncomment:
+            // cart.getBook().getTitle();
+            // cart.getBook().getPrice();
         }
     }
 
