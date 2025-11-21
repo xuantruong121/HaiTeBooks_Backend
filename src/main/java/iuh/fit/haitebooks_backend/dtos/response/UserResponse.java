@@ -15,4 +15,5 @@ public class UserResponse {
     private String phone;
     private String address;
     private String role;
+    private Boolean enabled; // ✅ THÊM DÒNG NÀY
 }

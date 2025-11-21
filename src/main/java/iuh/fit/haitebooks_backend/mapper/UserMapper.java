@@ -17,7 +17,8 @@ public class UserMapper {
                 user.getFullName(),
                 user.getPhone(),
                 user.getAddress(),
-                user.getRole() != null ? user.getRole().getName() : null
+                user.getRole() != null ? user.getRole().getName() : null,
+                user.isEnabled() // ✅ THÊM DÒNG NÀY
         );
     }
 

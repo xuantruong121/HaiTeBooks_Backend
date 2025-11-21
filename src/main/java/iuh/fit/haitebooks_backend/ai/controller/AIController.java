@@ -3,8 +3,11 @@ package iuh.fit.haitebooks_backend.ai.controller;
 import iuh.fit.haitebooks_backend.ai.service.BookEmbeddingGenerator;
 import iuh.fit.haitebooks_backend.ai.service.BookRecommendationService;
 import iuh.fit.haitebooks_backend.ai.service.BookSearchService;
+import iuh.fit.haitebooks_backend.ai.service.ChatbotService;
 import iuh.fit.haitebooks_backend.ai.service.EmbeddingAsyncService;
+import iuh.fit.haitebooks_backend.dtos.request.ChatRequest;
 import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
+import iuh.fit.haitebooks_backend.dtos.response.ChatResponse;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -31,15 +34,18 @@ public class AIController {
     private final BookSearchService bookSearchService;
     private final BookRecommendationService bookRecommendationService;
     private final EmbeddingAsyncService embeddingAsyncService;
+    private final ChatbotService chatbotService;
     private final iuh.fit.haitebooks_backend.service.UserService userService;
 
     public AIController(BookSearchService bookSearchService, 
                        BookRecommendationService bookRecommendationService,
                        EmbeddingAsyncService embeddingAsyncService,
+                       ChatbotService chatbotService,
                        iuh.fit.haitebooks_backend.service.UserService userService) {
         this.bookSearchService = bookSearchService;
         this.bookRecommendationService = bookRecommendationService;
         this.embeddingAsyncService = embeddingAsyncService;
+        this.chatbotService = chatbotService;
         this.userService = userService;
     }
 
@@ -137,5 +143,43 @@ public class AIController {
         response.put("message", "🚀 Đã bắt đầu sinh embedding cho các sách chưa có. Xem log để theo dõi tiến trình.");
         response.put("status", "processing");
         return ResponseEntity.accepted().body(response);
+    }
+
+    /**
+     * Chatbot hỗ trợ khách hàng
+     * Sử dụng RAG (Retrieval-Augmented Generation) với dữ liệu sách
+     * 
+     * @param request ChatRequest chứa message và conversationId (optional)
+     * @return ChatResponse với câu trả lời từ AI và danh sách sách được đề xuất
+     */
+    @PostMapping("/chat")
+    public ResponseEntity<ChatResponse> chat(@RequestBody @jakarta.validation.Valid ChatRequest request) {
+        log.info("💬 Nhận yêu cầu chat: {}", request.getMessage());
+        
+        try {
+            Map<String, Object> result = chatbotService.chat(
+                request.getMessage(), 
+                request.getConversationId()
+            );
+            
+            ChatResponse response = new ChatResponse(
+                (String) result.get("response"),
+                (List<String>) result.get("suggestedBooks"),
+                (List<String>) result.get("sources"),
+                (String) result.get("conversationId")
+            );
+            
+            return ResponseEntity.ok(response);
+            
+        } catch (Exception e) {
+            log.error("❌ Lỗi khi xử lý chat: {}", e.getMessage(), e);
+            ChatResponse errorResponse = new ChatResponse(
+                "Xin lỗi, có lỗi xảy ra. Vui lòng thử lại sau.",
+                List.of(),
+                List.of(),
+                request.getConversationId() != null ? request.getConversationId() : ""
+            );
+            return ResponseEntity.status(500).body(errorResponse);
+        }
     }
 }
