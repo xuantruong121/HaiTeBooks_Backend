@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import iuh.fit.haitebooks_backend.util.DateTimeUtil;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
@@ -93,7 +94,8 @@ public class PaymentService {
                 payment.setVnpTxnRef(txnRef);
                 payment.setAmount(request.getAmount());
                 payment.setMethod(Method.valueOf(request.getMethod().toUpperCase()));
-                payment.setPaymentDate(LocalDateTime.now());
+                // ✅ Sử dụng múi giờ Việt Nam (UTC+7)
+                payment.setPaymentDate(DateTimeUtil.nowVietnam());
                 payment.setRawResponse(null); // Xóa rawResponse cũ
 
                 // Đảm bảo order status là PENDING
@@ -112,7 +114,8 @@ public class PaymentService {
         p.setMethod(Method.valueOf(request.getMethod().toUpperCase()));
         p.setStatus(Status_Payment.PENDING);
         p.setVnpTxnRef(txnRef);
-        p.setPaymentDate(LocalDateTime.now());
+        // ✅ Sử dụng múi giờ Việt Nam (UTC+7)
+        p.setPaymentDate(DateTimeUtil.nowVietnam());
 
         // Set payment vào order để đồng bộ quan hệ
         order.setPayment(p);
@@ -167,7 +170,8 @@ public class PaymentService {
                 .orElseThrow(() -> new NotFoundException("Payment not found: " + txnRef));
 
         payment.setStatus(Status_Payment.SUCCESS);
-        payment.setPaymentDate(LocalDateTime.now());
+        // ✅ Sử dụng múi giờ Việt Nam (UTC+7)
+        payment.setPaymentDate(DateTimeUtil.nowVietnam());
 
         // ✅ Parse JSON và set vào các trường tương ứng
         parseAndSetVNPayFields(payment, rawResponse);

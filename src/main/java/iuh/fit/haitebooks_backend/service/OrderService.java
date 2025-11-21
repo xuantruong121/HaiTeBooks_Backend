@@ -16,6 +16,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import iuh.fit.haitebooks_backend.util.DateTimeUtil;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -50,7 +51,8 @@ public class OrderService {
         Order order = new Order();
         order.setUser(user);
         order.setStatus(Status_Order.PENDING);
-        order.setOrderDate(LocalDateTime.now());
+        // ✅ Sử dụng múi giờ Việt Nam (UTC+7)
+        order.setOrderDate(DateTimeUtil.nowVietnam());
         order.setAddress(request.getAddress());
         order.setNote(request.getNote());
 
