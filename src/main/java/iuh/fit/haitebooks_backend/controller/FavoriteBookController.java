@@ -22,19 +22,29 @@ public class FavoriteBookController {
 
     @GetMapping("/user/{userId}")
     public ResponseEntity<List<FavoriteBookResponse>> getFavoritesByUser(@PathVariable Long userId) {
-        List<FavoriteBookResponse> responses = favoriteBookService.getFavoritesByUser(userId)
-                .stream()
-                .map(f -> new FavoriteBookResponse(
-                        f.getId(),
-                        f.getUser().getId(),
-                        f.getBook().getId(),
-                        f.getBook().getTitle(),
-                        f.getBook().getAuthor(),
-                        f.getBook().getPrice(),
-                        f.getBook().getImageUrl(),
-                        f.getCreatedAt()
-                ))
+        // Service đã đảm bảo load đầy đủ dữ liệu trong transaction
+        List<FavoriteBook> favorites = favoriteBookService.getFavoritesByUser(userId);
+        
+        List<FavoriteBookResponse> responses = favorites.stream()
+                .map(f -> {
+                    // Đảm bảo book không null trước khi truy cập
+                    if (f.getBook() == null) {
+                        throw new RuntimeException("Book is null for favorite: " + f.getId());
+                    }
+                    
+                    return new FavoriteBookResponse(
+                            f.getId(),
+                            f.getUser() != null ? f.getUser().getId() : null,
+                            f.getBook().getId(),
+                            f.getBook().getTitle(),
+                            f.getBook().getAuthor(),
+                            f.getBook().getPrice(),
+                            f.getBook().getImageUrl(),
+                            f.getCreatedAt()
+                    );
+                })
                 .toList();
+
         return ResponseEntity.ok(responses);
     }
 
@@ -45,12 +55,12 @@ public class FavoriteBookController {
         
         FavoriteBookResponse response = new FavoriteBookResponse(
                 favoriteBook.getId(),
-                favoriteBook.getUser().getId(),
-                favoriteBook.getBook().getId(),
-                favoriteBook.getBook().getTitle(),
-                favoriteBook.getBook().getAuthor(),
-                favoriteBook.getBook().getPrice(),
-                favoriteBook.getBook().getImageUrl(),
+                favoriteBook.getUser() != null ? favoriteBook.getUser().getId() : null,
+                favoriteBook.getBook() != null ? favoriteBook.getBook().getId() : null,
+                favoriteBook.getBook() != null ? favoriteBook.getBook().getTitle() : null,
+                favoriteBook.getBook() != null ? favoriteBook.getBook().getAuthor() : null,
+                favoriteBook.getBook() != null ? favoriteBook.getBook().getPrice() : null,
+                favoriteBook.getBook() != null ? favoriteBook.getBook().getImageUrl() : null,
                 favoriteBook.getCreatedAt()
         );
         return ResponseEntity.ok(response);

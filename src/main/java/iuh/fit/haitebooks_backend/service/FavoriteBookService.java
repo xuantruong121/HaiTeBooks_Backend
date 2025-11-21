@@ -32,7 +32,28 @@ public class FavoriteBookService {
 
     @Transactional(readOnly = true)
     public List<FavoriteBook> getFavoritesByUser(Long userId) {
-        return favoriteBookRepository.findByUserId(userId);
+        List<FavoriteBook> favorites = favoriteBookRepository.findByUserId(userId);
+        
+        // Trigger load lazy relationships trong transaction
+        favorites.forEach(favorite -> {
+            if (favorite.getBook() != null) {
+                favorite.getBook().getId(); // Trigger load book
+                favorite.getBook().getTitle(); // Trigger load book fields
+                favorite.getBook().getAuthor();
+                favorite.getBook().getPrice();
+                favorite.getBook().getImageUrl();
+                
+                // Nếu Book có category (lazy), cũng cần trigger load
+                if (favorite.getBook().getCategory() != null) {
+                    favorite.getBook().getCategory().getName();
+                }
+            }
+            if (favorite.getUser() != null) {
+                favorite.getUser().getId(); // Trigger load user
+            }
+        });
+        
+        return favorites;
     }
 
     @Transactional
