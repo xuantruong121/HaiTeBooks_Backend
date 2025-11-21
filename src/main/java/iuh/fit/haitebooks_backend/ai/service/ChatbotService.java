@@ -18,6 +18,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Arrays;
 
 @Service
 public class ChatbotService {
@@ -34,6 +35,7 @@ public class ChatbotService {
     private final BookRepository bookRepository;
     private final CohereEmbeddingService embeddingService;
     private final OrderService orderService;
+    private final BookSearchService bookSearchService;
 
     // System prompt cho chatbot
     private static final String SYSTEM_PROMPT = """
@@ -44,6 +46,23 @@ public class ChatbotService {
         3. Hỗ trợ thông tin về đơn hàng, thanh toán, giao hàng
         4. Trả lời câu hỏi về đơn hàng của khách hàng (nếu họ đã đăng nhập)
         5. Trả lời bằng tiếng Việt một cách tự nhiên và thân thiện
+        
+        📚 QUY TẮC GỢI Ý SÁCH (ƯU TIÊN):
+        1. ƯU TIÊN GỢI Ý SÁCH TỪ CỬA HÀNG:
+           - Nếu có danh sách "Thông tin về các cuốn sách trong cửa hàng" được cung cấp bên dưới
+           - Hãy ƯU TIÊN gợi ý các sách từ danh sách này trước
+           - Đề cập rõ ràng: "Trong cửa hàng chúng tôi có..." hoặc "Cửa hàng đang có sách..."
+        
+        2. GỢI Ý SÁCH BÊN NGOÀI (KHI KHÔNG CÓ HOẶC KHÔNG ĐỦ):
+           - Nếu danh sách sách từ cửa hàng rỗng, không có sách phù hợp, hoặc không đủ số lượng khách hàng yêu cầu
+           - Bạn CÓ THỂ gợi ý thêm sách từ kiến thức chung (từ internet, sách nổi tiếng)
+           - Nhưng phải nói rõ: "Ngoài ra, bạn cũng có thể tham khảo..." hoặc "Một số sách khác bạn có thể quan tâm..."
+           - Luôn nhấn mạnh rằng những sách này hiện chưa có trong cửa hàng
+        
+        3. CÁCH TRÌNH BÀY:
+           - Luôn bắt đầu với sách từ cửa hàng (nếu có)
+           - Sau đó mới đề cập đến sách bên ngoài (nếu cần)
+           - Phân biệt rõ ràng giữa sách có sẵn và sách tham khảo
         
         Khi khách hàng hỏi về đơn hàng, bạn có thể:
         - Liệt kê các đơn hàng của họ
@@ -56,10 +75,12 @@ public class ChatbotService {
 
     public ChatbotService(BookRepository bookRepository, 
                          CohereEmbeddingService embeddingService,
-                         OrderService orderService) {
+                         OrderService orderService,
+                         BookSearchService bookSearchService) {
         this.bookRepository = bookRepository;
         this.embeddingService = embeddingService;
         this.orderService = orderService;
+        this.bookSearchService = bookSearchService;
     }
 
     /**
@@ -137,10 +158,32 @@ public class ChatbotService {
 
     /**
      * Tìm kiếm sách liên quan dựa trên tin nhắn của user (RAG)
+     * Ưu tiên sử dụng semantic search để tìm sách chính xác hơn
      */
     private List<Book> findRelevantBooks(String userMessage) {
         try {
-            // Tìm kiếm đơn giản bằng keyword matching
+            // ✅ Ưu tiên 1: Sử dụng semantic search (tìm kiếm thông minh với embedding)
+            List<BookResponse> semanticResults = bookSearchService.smartSearch(userMessage, 10);
+            
+            if (!semanticResults.isEmpty()) {
+                // Chuyển BookResponse về Book entity
+                List<Book> books = semanticResults.stream()
+                        .map(bookResponse -> {
+                            // Tìm Book từ ID
+                            return bookRepository.findById(bookResponse.getId()).orElse(null);
+                        })
+                        .filter(book -> book != null)
+                        .limit(10) // Lấy tối đa 10 sách từ semantic search
+                        .collect(Collectors.toList());
+                
+                if (!books.isEmpty()) {
+                    log.info("✅ Tìm thấy {} sách bằng semantic search", books.size());
+                    return books;
+                }
+            }
+            
+            // ✅ Ưu tiên 2: Fallback về keyword matching nếu semantic search không có kết quả
+            log.info("⚠️ Semantic search không có kết quả, chuyển sang keyword matching");
             List<Book> allBooks = bookRepository.findAll();
             
             if (allBooks.isEmpty()) {
@@ -149,55 +192,86 @@ public class ChatbotService {
 
             // Tìm kiếm theo từ khóa trong title, author, description
             String lowerMessage = userMessage.toLowerCase();
+            String[] keywords = lowerMessage.split("\\s+"); // Tách thành các từ khóa
+            
             List<Book> relevantBooks = allBooks.stream()
                     .filter(book -> {
                         String title = book.getTitle() != null ? book.getTitle().toLowerCase() : "";
                         String author = book.getAuthor() != null ? book.getAuthor().toLowerCase() : "";
                         String description = book.getDescription() != null ? book.getDescription().toLowerCase() : "";
                         
-                        // Kiểm tra từ khóa phổ biến về sách
-                        return title.contains(lowerMessage) || 
-                               author.contains(lowerMessage) ||
-                               description.contains(lowerMessage) ||
-                               lowerMessage.contains(title) ||
-                               lowerMessage.contains(author);
+                        // Kiểm tra từng từ khóa
+                        for (String keyword : keywords) {
+                            if (keyword.length() > 2 && // Bỏ qua từ quá ngắn
+                                (title.contains(keyword) || 
+                                 author.contains(keyword) ||
+                                 description.contains(keyword))) {
+                                return true;
+                            }
+                        }
+                        return false;
                     })
-                    .limit(5) // Giới hạn 5 sách
+                    .limit(10) // Tăng lên 10 sách
                     .collect(Collectors.toList());
 
-            // Nếu không tìm thấy, trả về sách phổ biến (có nhiều stock)
+            // ✅ Ưu tiên 3: Nếu vẫn không tìm thấy, trả về sách phổ biến (có nhiều stock)
             if (relevantBooks.isEmpty()) {
+                log.info("⚠️ Keyword matching không có kết quả, trả về sách phổ biến");
                 relevantBooks = allBooks.stream()
                         .sorted((a, b) -> Integer.compare(b.getStock(), a.getStock()))
-                        .limit(3)
+                        .limit(5)
                         .collect(Collectors.toList());
             }
 
             return relevantBooks;
 
         } catch (Exception e) {
-            log.error("❌ Lỗi khi tìm kiếm sách: {}", e.getMessage());
+            log.error("❌ Lỗi khi tìm kiếm sách: {}", e.getMessage(), e);
             return List.of();
         }
     }
 
     /**
      * Xây dựng context từ danh sách sách để đưa vào prompt
+     * Phân biệt khi có sách và khi không có sách trong cửa hàng
      */
     private String buildContextFromBooks(List<Book> books) {
         if (books.isEmpty()) {
-            return "Hiện tại cửa hàng có nhiều sách hay. Bạn có thể hỏi về bất kỳ cuốn sách nào.";
+            return """
+                📚 THÔNG TIN SÁCH TRONG CỬA HÀNG:
+                Hiện tại cửa hàng chưa có sách nào phù hợp với yêu cầu của khách hàng.
+                
+                ⚠️ HƯỚNG DẪN:
+                - Bạn có thể gợi ý sách từ kiến thức chung (sách nổi tiếng, sách phổ biến)
+                - Nhưng phải nói rõ: "Hiện tại cửa hàng chưa có sách này, nhưng bạn có thể tham khảo..."
+                - Hoặc: "Một số sách tương tự bạn có thể quan tâm (hiện chưa có trong cửa hàng)..."
+                """;
         }
 
-        StringBuilder context = new StringBuilder("Thông tin về các cuốn sách trong cửa hàng:\n\n");
+        StringBuilder context = new StringBuilder();
+        context.append("""
+            📚 THÔNG TIN SÁCH TRONG CỬA HÀNG HAI TEBOOKS:
+            Đây là danh sách các sách có sẵn trong cửa hàng phù hợp với yêu cầu của khách hàng.
+            
+            ⚠️ HƯỚNG DẪN GỢI Ý:
+            1. ƯU TIÊN: Gợi ý các sách từ danh sách dưới đây trước (sách có sẵn trong cửa hàng)
+            2. BỔ SUNG: Nếu khách hàng cần thêm gợi ý hoặc không hài lòng với danh sách, 
+               bạn có thể gợi ý thêm sách từ kiến thức chung, nhưng phải nói rõ:
+               "Ngoài ra, bạn cũng có thể tham khảo [tên sách] (hiện chưa có trong cửa hàng)"
+            
+            Danh sách sách có sẵn trong cửa hàng:
+            
+            """);
         
-        for (Book book : books) {
+        for (int i = 0; i < books.size(); i++) {
+            Book book = books.get(i);
             context.append(String.format(
-                "- Tên sách: %s\n" +
-                "  Tác giả: %s\n" +
-                "  Giá: %.0f VNĐ\n" +
-                "  Mô tả: %s\n" +
-                "  Tồn kho: %d cuốn\n\n",
+                "%d. Tên sách: %s\n" +
+                "   Tác giả: %s\n" +
+                "   Giá: %.0f VNĐ\n" +
+                "   Mô tả: %s\n" +
+                "   Tồn kho: %d cuốn\n\n",
+                i + 1,
                 book.getTitle(),
                 book.getAuthor(),
                 book.getPrice(),
@@ -207,6 +281,13 @@ public class ChatbotService {
                 book.getStock()
             ));
         }
+        
+        context.append("""
+            
+            ⚠️ LƯU Ý: 
+            - Ưu tiên gợi ý sách từ danh sách trên (sách có sẵn trong cửa hàng)
+            - Có thể bổ sung gợi ý sách bên ngoài nếu cần, nhưng phải phân biệt rõ ràng
+            """);
 
         return context.toString();
     }
@@ -295,18 +376,34 @@ public class ChatbotService {
 
     /**
      * Trích xuất tên sách được đề xuất từ response
+     * CHỈ lấy sách từ relevantBooks (sách trong database), không lấy sách từ bên ngoài
      */
     private List<String> extractBookNames(String response, List<Book> relevantBooks) {
         List<String> suggested = new ArrayList<>();
+        String responseLower = response.toLowerCase();
         
-        // Kiểm tra xem response có đề cập đến sách nào không
+        // Kiểm tra xem response có đề cập đến sách nào trong database không
         for (Book book : relevantBooks) {
-            if (response.toLowerCase().contains(book.getTitle().toLowerCase())) {
-                suggested.add(book.getTitle());
+            String title = book.getTitle();
+            if (title != null) {
+                String titleLower = title.toLowerCase();
+                // Kiểm tra exact match hoặc partial match
+                if (responseLower.contains(titleLower) || 
+                    titleLower.contains(responseLower) ||
+                    // Kiểm tra từng từ trong title
+                    title.split("\\s+").length > 0 && 
+                    Arrays.stream(title.split("\\s+"))
+                        .anyMatch(word -> word.length() > 3 && responseLower.contains(word.toLowerCase()))) {
+                    suggested.add(title);
+                }
             }
         }
 
-        return suggested.stream().distinct().limit(3).collect(Collectors.toList());
+        // Chỉ trả về sách từ database, không có sách nào khác
+        return suggested.stream()
+                .distinct()
+                .limit(5) // Tăng lên 5 sách
+                .collect(Collectors.toList());
     }
 
     /**
