@@ -91,6 +91,7 @@ public class SecurityConfig {
 
                         /* ================= AUTHENTICATED USERS ================= */
                         .requestMatchers("/api/users/me", "/api/users/me/**").authenticated()
+                        .requestMatchers("/api/users/change-password").authenticated()
                         .requestMatchers("/api/orders/**").authenticated()
                         .requestMatchers("/api/payments/**").authenticated()
                         .requestMatchers("/api/cart/**").authenticated()

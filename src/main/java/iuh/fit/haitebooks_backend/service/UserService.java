@@ -3,6 +3,8 @@ package iuh.fit.haitebooks_backend.service;
 import iuh.fit.haitebooks_backend.dtos.request.ChangePasswordRequest;
 import iuh.fit.haitebooks_backend.dtos.request.UserRequest;
 import iuh.fit.haitebooks_backend.dtos.response.UserResponse;
+import iuh.fit.haitebooks_backend.exception.BadRequestException;
+import iuh.fit.haitebooks_backend.exception.UnauthorizedException;
 import iuh.fit.haitebooks_backend.mapper.UserMapper;
 import iuh.fit.haitebooks_backend.model.Role;
 import iuh.fit.haitebooks_backend.model.User;
@@ -154,16 +156,16 @@ public class UserService {
     @Transactional
     public void changePassword(String username, ChangePasswordRequest request) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+                .orElseThrow(() -> new BadRequestException("User not found: " + username));
 
-        // ✅ Xác thực mật khẩu cũ
+        // ✅ Xác thực mật khẩu cũ - throw 401 Unauthorized
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
-            throw new RuntimeException("Mật khẩu cũ không đúng");
+            throw new UnauthorizedException("Mật khẩu cũ không đúng");
         }
 
-        // ✅ Kiểm tra mật khẩu mới không được trùng với mật khẩu cũ
+        // ✅ Kiểm tra mật khẩu mới không được trùng với mật khẩu cũ - throw 400 Bad Request
         if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
-            throw new RuntimeException("Mật khẩu mới phải khác mật khẩu cũ");
+            throw new BadRequestException("Mật khẩu mới phải khác mật khẩu cũ");
         }
 
         // ✅ Mã hóa và cập nhật mật khẩu mới
