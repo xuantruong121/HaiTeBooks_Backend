@@ -1,6 +1,7 @@
 package iuh.fit.haitebooks_backend.controller;
 
 import iuh.fit.haitebooks_backend.dtos.request.ChangePasswordRequest;
+import iuh.fit.haitebooks_backend.dtos.request.DeleteAccountRequest;
 import iuh.fit.haitebooks_backend.dtos.request.UserRequest;
 import iuh.fit.haitebooks_backend.dtos.response.UserResponse;
 import iuh.fit.haitebooks_backend.service.UserService;
@@ -84,5 +85,15 @@ public class UserController {
 
         userService.changePassword(userDetails.getUsername(), request);
         return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
+    }
+
+    // ✅ Vô hiệu hóa tài khoản hiện tại (set enabled = false)
+    @DeleteMapping("/me")
+    public ResponseEntity<Map<String, String>> deactivateCurrentUser(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody DeleteAccountRequest request) {
+
+        userService.deactivateCurrentUser(userDetails.getUsername(), request.getPassword());
+        return ResponseEntity.ok(Map.of("message", "Tài khoản đã được vô hiệu hóa thành công"));
     }
 }

@@ -174,6 +174,22 @@ public class UserService {
         userRepository.save(user);
     }
 
+    // ✅ Vô hiệu hóa tài khoản hiện tại (set enabled = false)
+    @Transactional
+    public void deactivateCurrentUser(String username, String password) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new BadRequestException("User not found: " + username));
+        
+        // ✅ Xác thực mật khẩu trước khi vô hiệu hóa
+        if (!passwordEncoder.matches(password, user.getPassword())) {
+            throw new UnauthorizedException("Mật khẩu không đúng");
+        }
+        
+        // ✅ Vô hiệu hóa tài khoản (set enabled = false) thay vì xóa
+        user.setEnabled(false);
+        userRepository.save(user);
+    }
+
     /**
      * Đảm bảo lazy relationships được load trong transaction
      */
