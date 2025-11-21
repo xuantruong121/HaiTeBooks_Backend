@@ -4,6 +4,8 @@ import iuh.fit.haitebooks_backend.dtos.request.ChangePasswordRequest;
 import iuh.fit.haitebooks_backend.dtos.request.UserRequest;
 import iuh.fit.haitebooks_backend.dtos.response.UserResponse;
 import iuh.fit.haitebooks_backend.exception.BadRequestException;
+import iuh.fit.haitebooks_backend.exception.ConflictException;
+import iuh.fit.haitebooks_backend.exception.NotFoundException;
 import iuh.fit.haitebooks_backend.exception.UnauthorizedException;
 import iuh.fit.haitebooks_backend.mapper.UserMapper;
 import iuh.fit.haitebooks_backend.model.Role;
@@ -47,15 +49,15 @@ public class UserService {
     @Transactional
     public User register(User user, String roleName) {
         if (userRepository.existsByUsername(user.getUsername())) {
-            throw new RuntimeException("Username already exists");
+            throw new ConflictException("Username already exists");
         }
         if (userRepository.existsByEmail(user.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new ConflictException("Email already exists");
         }
 
         // Tìm role
         Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new RuntimeException("Role not found: " + roleName));
+                .orElseThrow(() -> new NotFoundException("Role not found: " + roleName));
 
         // Mã hoá mật khẩu
         user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -70,7 +72,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse getUserById(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("User not found with id " + id));
+                .orElseThrow(() -> new NotFoundException("User not found with id " + id));
         
         // Đảm bảo lazy relationships được load trong transaction
         loadLazyRelationships(user);
@@ -81,14 +83,14 @@ public class UserService {
     @Transactional
     public UserResponse createUser(UserRequest request) {
         if (userRepository.existsByUsername(request.getUsername())) {
-            throw new RuntimeException("Username already exists");
+            throw new ConflictException("Username already exists");
         }
         if (userRepository.existsByEmail(request.getEmail())) {
-            throw new RuntimeException("Email already exists");
+            throw new ConflictException("Email already exists");
         }
 
         Role role = roleRepository.findByName(request.getRoleName())
-                .orElseThrow(() -> new RuntimeException("Role not found: " + request.getRoleName()));
+                .orElseThrow(() -> new NotFoundException("Role not found: " + request.getRoleName()));
 
         String encodedPassword = passwordEncoder.encode(request.getPassword());
         User user = UserMapper.toEntity(request, role, encodedPassword);
@@ -103,20 +105,20 @@ public class UserService {
     @Transactional
     public UserResponse updateUser(Long id, UserRequest request) {
         User existing = userRepository.findById(id)
-                .orElseThrow(() -> new NoSuchElementException("User not found with id " + id));
+                .orElseThrow(() -> new NotFoundException("User not found with id " + id));
 
         // Kiểm tra trùng email hoặc username
         userRepository.findByUsername(request.getUsername()).ifPresent(u -> {
-            if (!u.getId().equals(id)) throw new RuntimeException("Username already exists");
+            if (!u.getId().equals(id)) throw new ConflictException("Username already exists");
         });
         userRepository.findByEmail(request.getEmail()).ifPresent(u -> {
-            if (!u.getId().equals(id)) throw new RuntimeException("Email already exists");
+            if (!u.getId().equals(id)) throw new ConflictException("Email already exists");
         });
 
         Role role = null;
         if (request.getRoleName() != null) {
             role = roleRepository.findByName(request.getRoleName())
-                    .orElseThrow(() -> new RuntimeException("Role not found: " + request.getRoleName()));
+                    .orElseThrow(() -> new NotFoundException("Role not found: " + request.getRoleName()));
         }
 
         String encodedPassword = null;
@@ -141,7 +143,7 @@ public class UserService {
     @Transactional
     public void deleteUser(Long id) {
         if (!userRepository.existsById(id)) {
-            throw new NoSuchElementException("User not found with id " + id);
+            throw new NotFoundException("User not found with id " + id);
         }
         userRepository.deleteById(id);
     }
@@ -150,7 +152,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserResponse getByUsername(String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+                .orElseThrow(() -> new NotFoundException("User not found: " + username));
         
         // Đảm bảo lazy relationships được load trong transaction
         loadLazyRelationships(user);
@@ -161,7 +163,7 @@ public class UserService {
     @Transactional
     public void changePassword(String username, ChangePasswordRequest request) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new BadRequestException("User not found: " + username));
+                .orElseThrow(() -> new NotFoundException("User not found: " + username));
 
         // ✅ Xác thực mật khẩu cũ - throw 401 Unauthorized
         if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {

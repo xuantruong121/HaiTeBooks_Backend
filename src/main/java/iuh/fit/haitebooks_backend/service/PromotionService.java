@@ -2,6 +2,9 @@ package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.PromotionRequest;
 import iuh.fit.haitebooks_backend.dtos.response.PromotionResponse;
+import iuh.fit.haitebooks_backend.exception.BadRequestException;
+import iuh.fit.haitebooks_backend.exception.ConflictException;
+import iuh.fit.haitebooks_backend.exception.NotFoundException;
 import iuh.fit.haitebooks_backend.mapper.PromotionMapper;
 import iuh.fit.haitebooks_backend.model.*;
 import iuh.fit.haitebooks_backend.repository.*;
@@ -28,15 +31,15 @@ public class PromotionService {
     public PromotionResponse create(PromotionRequest req, Long creatorId) {
 
         if (promotionRepo.existsByCode(req.getCode())) {
-            throw new RuntimeException("Promotion code already exists");
+            throw new ConflictException("Promotion code already exists");
         }
 
         if (req.getStartDate().isAfter(req.getEndDate())) {
-            throw new RuntimeException("Start date must be before end date");
+            throw new BadRequestException("Start date must be before end date");
         }
 
         User creator = userRepo.findById(creatorId)
-                .orElseThrow(() -> new RuntimeException("Creator not found"));
+                .orElseThrow(() -> new NotFoundException("Creator not found"));
 
         Promotion p = new Promotion();
         p.setName(req.getName());
@@ -64,13 +67,13 @@ public class PromotionService {
     @Transactional
     public PromotionResponse approve(Long promotionId, Long adminId) {
         Promotion p = promotionRepo.findById(promotionId)
-                .orElseThrow(() -> new RuntimeException("Promotion not found"));
+                .orElseThrow(() -> new NotFoundException("Promotion not found"));
 
         User admin = userRepo.findById(adminId)
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new NotFoundException("Admin not found"));
 
         if (!p.isActive()) {
-            throw new RuntimeException("Cannot approve inactive promotion");
+            throw new BadRequestException("Cannot approve inactive promotion");
         }
 
         p.setApprovedBy(admin);
@@ -88,10 +91,10 @@ public class PromotionService {
     @Transactional
     public PromotionResponse reject(Long promotionId, Long adminId) {
         Promotion p = promotionRepo.findById(promotionId)
-                .orElseThrow(() -> new RuntimeException("Promotion not found"));
+                .orElseThrow(() -> new NotFoundException("Promotion not found"));
 
         User admin = userRepo.findById(adminId)
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new NotFoundException("Admin not found"));
 
         p.setActive(false);
         promotionRepo.save(p);
@@ -108,10 +111,10 @@ public class PromotionService {
     @Transactional
     public void deactivate(Long promotionId, Long adminId) {
         Promotion p = promotionRepo.findById(promotionId)
-                .orElseThrow(() -> new RuntimeException("Promotion not found"));
+                .orElseThrow(() -> new NotFoundException("Promotion not found"));
 
         User admin = userRepo.findById(adminId)
-                .orElseThrow(() -> new RuntimeException("Admin not found"));
+                .orElseThrow(() -> new NotFoundException("Admin not found"));
 
         p.setActive(false);
         promotionRepo.save(p);
@@ -165,29 +168,29 @@ public class PromotionService {
 
     public Promotion validatePromotion(String code, Double orderAmount) {
         Promotion p = promotionRepo.findByCode(code)
-                .orElseThrow(() -> new RuntimeException("Mã khuyến mãi không tồn tại"));
+                .orElseThrow(() -> new NotFoundException("Mã khuyến mãi không tồn tại"));
 
         LocalDate today = LocalDate.now();
 
         if (!p.isActive()) {
-            throw new RuntimeException("Mã khuyến mãi đã bị vô hiệu hóa");
+            throw new BadRequestException("Mã khuyến mãi đã bị vô hiệu hóa");
         }
         if (p.getApprovedBy() == null) {
-            throw new RuntimeException("Mã khuyến mãi chưa được duyệt");
+            throw new BadRequestException("Mã khuyến mãi chưa được duyệt");
         }
         if (p.getQuantity() <= 0) {
-            throw new RuntimeException("Mã khuyến mãi đã hết số lượng");
+            throw new BadRequestException("Mã khuyến mãi đã hết số lượng");
         }
         if (today.isBefore(p.getStartDate())) {
-            throw new RuntimeException("Mã khuyến mãi chưa đến ngày sử dụng");
+            throw new BadRequestException("Mã khuyến mãi chưa đến ngày sử dụng");
         }
         if (today.isAfter(p.getEndDate())) {
-            throw new RuntimeException("Mã khuyến mãi đã hết hạn");
+            throw new BadRequestException("Mã khuyến mãi đã hết hạn");
         }
         // Kiểm tra điều kiện đơn hàng tối thiểu
         if (p.getMinimumOrderAmount() != null && orderAmount != null) {
             if (orderAmount < p.getMinimumOrderAmount()) {
-                throw new RuntimeException("Đơn hàng phải có giá trị tối thiểu " + 
+                throw new BadRequestException("Đơn hàng phải có giá trị tối thiểu " + 
                     String.format("%.0f", p.getMinimumOrderAmount()) + " VND để sử dụng mã này");
             }
         }
@@ -221,18 +224,18 @@ public class PromotionService {
     public PromotionResponse update(Long promotionId, PromotionRequest req) {
         // Tìm promotion theo ID
         Promotion p = promotionRepo.findById(promotionId)
-                .orElseThrow(() -> new RuntimeException("Promotion not found"));
+                .orElseThrow(() -> new NotFoundException("Promotion not found"));
 
         // Validate: Kiểm tra code không trùng với promotion khác (trừ chính nó)
         if (!p.getCode().equals(req.getCode())) {
             if (promotionRepo.existsByCode(req.getCode())) {
-                throw new RuntimeException("Promotion code already exists");
+                throw new ConflictException("Promotion code already exists");
             }
         }
 
         // Validate: Start date phải trước end date
         if (req.getStartDate().isAfter(req.getEndDate())) {
-            throw new RuntimeException("Start date must be before end date");
+            throw new BadRequestException("Start date must be before end date");
         }
 
         // Cập nhật các field

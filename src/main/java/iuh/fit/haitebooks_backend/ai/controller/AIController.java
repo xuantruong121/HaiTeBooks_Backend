@@ -25,7 +25,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/ai")
-@CrossOrigin(origins = "*")
 @Validated
 public class AIController {
 

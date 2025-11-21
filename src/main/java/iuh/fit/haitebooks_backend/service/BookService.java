@@ -3,6 +3,7 @@ package iuh.fit.haitebooks_backend.service;
 import iuh.fit.haitebooks_backend.ai.service.EmbeddingAsyncService;
 import iuh.fit.haitebooks_backend.dtos.request.BookRequest;
 import iuh.fit.haitebooks_backend.dtos.response.BookResponse;
+import iuh.fit.haitebooks_backend.exception.NotFoundException;
 import iuh.fit.haitebooks_backend.mapper.BookMapper;
 import iuh.fit.haitebooks_backend.model.Book;
 import iuh.fit.haitebooks_backend.model.BookCategory;
@@ -87,7 +88,7 @@ public class BookService {
     @Transactional
     public BookResponse createBook(BookRequest request) {
         BookCategory category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found with id " + request.getCategoryId()));
+                .orElseThrow(() -> new NotFoundException("Category not found with id " + request.getCategoryId()));
 
         Book book = BookMapper.toBookEntity(request, category);
 
@@ -111,7 +112,7 @@ public class BookService {
     @Transactional(readOnly = true)
     public BookResponse getBookById(Long id) {
         Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Book not found with id " + id));
+                .orElseThrow(() -> new NotFoundException("Book not found with id " + id));
         
         // Đảm bảo category được load trong transaction
         if (book.getCategory() != null) {
@@ -123,9 +124,9 @@ public class BookService {
     @Transactional
     public BookResponse updateBook(Long id, BookRequest request) {
         Book book = bookRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Book not found with id " + id));
+                .orElseThrow(() -> new NotFoundException("Book not found with id " + id));
         BookCategory category = categoryRepository.findById(request.getCategoryId())
-                .orElseThrow(() -> new RuntimeException("Category not found with id " + request.getCategoryId()));
+                .orElseThrow(() -> new NotFoundException("Category not found with id " + request.getCategoryId()));
 
         BookMapper.updateBookFromRequest(book, request, category);
         book = bookRepository.save(book);
@@ -140,7 +141,7 @@ public class BookService {
     @Transactional
     public void deleteBook(Long id) {
         if (!bookRepository.existsById(id)) {
-            throw new RuntimeException("Book not found with id " + id);
+            throw new NotFoundException("Book not found with id " + id);
         }
         bookRepository.deleteById(id);
     }

@@ -2,10 +2,14 @@ package iuh.fit.haitebooks_backend.service;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import iuh.fit.haitebooks_backend.dtos.request.PaymentRequest;
+import iuh.fit.haitebooks_backend.exception.ConflictException;
+import iuh.fit.haitebooks_backend.exception.NotFoundException;
 import iuh.fit.haitebooks_backend.mapper.PaymentMapper;
 import iuh.fit.haitebooks_backend.model.*;
 import iuh.fit.haitebooks_backend.repository.OrderRepository;
 import iuh.fit.haitebooks_backend.repository.PaymentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,6 +20,8 @@ import java.util.Optional;
 
 @Service
 public class PaymentService {
+
+    private static final Logger log = LoggerFactory.getLogger(PaymentService.class);
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
@@ -31,11 +37,11 @@ public class PaymentService {
     @Transactional
     public Payment createPayment(PaymentRequest request) {
         Order order = orderRepository.findById(request.getOrderId())
-                .orElseThrow(() -> new RuntimeException("Order not found with id " + request.getOrderId()));
+                .orElseThrow(() -> new NotFoundException("Order not found with id " + request.getOrderId()));
 
         // Kiểm tra trùng thanh toán
         if (order.getPayment() != null) {
-            throw new RuntimeException("This order has already been paid");
+            throw new ConflictException("This order has already been paid");
         }
 
         // Tạo Payment entity
@@ -64,7 +70,7 @@ public class PaymentService {
     @Transactional
     public Payment createPaymentRecordPending(PaymentRequest request, String txnRef) {
         Order order = orderRepository.findById(request.getOrderId())
-                .orElseThrow(() -> new RuntimeException("Order not found"));
+                .orElseThrow(() -> new NotFoundException("Order not found"));
 
         // ✅ Kiểm tra payment đã tồn tại từ repository (chính xác hơn)
         Optional<Payment> existingPayment = paymentRepository.findByOrderId(request.getOrderId())
@@ -76,7 +82,7 @@ public class PaymentService {
 
             // Nếu payment đã SUCCESS, không cho tạo lại
             if (payment.getStatus() == Status_Payment.SUCCESS) {
-                throw new RuntimeException("This order has already been paid successfully");
+                throw new ConflictException("This order has already been paid successfully");
             }
 
             // Nếu payment FAILED hoặc PENDING, cập nhật payment cũ
@@ -151,14 +157,14 @@ public class PaymentService {
         } catch (Exception e) {
             // Nếu parse fail, chỉ log warning, không throw exception
             // Các trường sẽ giữ giá trị cũ hoặc null
-            System.err.println("Warning: Failed to parse VNPay response JSON: " + e.getMessage());
+            log.warn("Warning: Failed to parse VNPay response JSON: {}", e.getMessage());
         }
     }
 
     @Transactional
     public void markPaymentSuccess(String txnRef, String rawResponse) {
         Payment payment = paymentRepository.findByVnpTxnRef(txnRef)
-                .orElseThrow(() -> new RuntimeException("Payment not found: " + txnRef));
+                .orElseThrow(() -> new NotFoundException("Payment not found: " + txnRef));
 
         payment.setStatus(Status_Payment.SUCCESS);
         payment.setPaymentDate(LocalDateTime.now());

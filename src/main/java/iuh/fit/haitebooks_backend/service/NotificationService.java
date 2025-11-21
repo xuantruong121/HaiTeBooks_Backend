@@ -2,6 +2,7 @@ package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.NotificationRequest;
 import iuh.fit.haitebooks_backend.dtos.response.NotificationResponse;
+import iuh.fit.haitebooks_backend.exception.NotFoundException;
 import iuh.fit.haitebooks_backend.mapper.NotificationMapper;
 import iuh.fit.haitebooks_backend.model.Notification;
 import iuh.fit.haitebooks_backend.model.User;
@@ -28,7 +29,7 @@ public class NotificationService {
     public NotificationResponse send(NotificationRequest req, Long senderId) {
 
         User receiver = userRepo.findById(req.getReceiverId())
-                .orElseThrow(() -> new RuntimeException("Receiver not found"));
+                .orElseThrow(() -> new NotFoundException("Receiver not found"));
 
         User sender = senderId != null
                 ? userRepo.findById(senderId).orElse(null)
@@ -91,7 +92,7 @@ public class NotificationService {
     @Transactional
     public void markAsRead(Long id) {
         Notification noti = notificationRepo.findById(id)
-                .orElseThrow(() -> new RuntimeException("Notification not found"));
+                .orElseThrow(() -> new NotFoundException("Notification not found"));
         noti.setRead(true);
         notificationRepo.save(noti);
     }

@@ -156,7 +156,7 @@ public class BookEmbeddingGenerator {
 
         } catch (Exception e) {
             log.error("❌ Lỗi nghiêm trọng khi sinh embedding: {}", e.getMessage(), e);
-            throw new RuntimeException("Lỗi khi sinh embedding", e);
+            throw new RuntimeException("Lỗi khi sinh embedding: " + e.getMessage(), e);
         }
     }
 

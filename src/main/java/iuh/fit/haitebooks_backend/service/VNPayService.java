@@ -1,6 +1,7 @@
 package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.PaymentRequest;
+import iuh.fit.haitebooks_backend.exception.BadRequestException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -128,7 +129,7 @@ public class VNPayService {
             }
             return sb.toString();
         } catch (Exception ex) {
-            throw new RuntimeException(ex);
+            throw new BadRequestException("Error generating VNPay hash: " + ex.getMessage(), ex);
         }
     }
 

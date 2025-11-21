@@ -1,6 +1,8 @@
 package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.FavoriteBookRequest;
+import iuh.fit.haitebooks_backend.exception.ConflictException;
+import iuh.fit.haitebooks_backend.exception.NotFoundException;
 import iuh.fit.haitebooks_backend.model.Book;
 import iuh.fit.haitebooks_backend.model.FavoriteBook;
 import iuh.fit.haitebooks_backend.model.User;
@@ -36,14 +38,14 @@ public class FavoriteBookService {
     @Transactional
     public FavoriteBook addToFavorites(FavoriteBookRequest request, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
         Book book = bookRepository.findById(request.getBookId())
-                .orElseThrow(() -> new RuntimeException("Book not found"));
+                .orElseThrow(() -> new NotFoundException("Book not found"));
 
         // Kiểm tra xem đã có trong favorites chưa
         Optional<FavoriteBook> existing = favoriteBookRepository.findByUserAndBook(user, book);
         if (existing.isPresent()) {
-            throw new RuntimeException("Book already in favorites");
+            throw new ConflictException("Book already in favorites");
         }
 
         FavoriteBook favoriteBook = FavoriteBook.builder()
@@ -58,9 +60,9 @@ public class FavoriteBookService {
     @Transactional
     public void removeFromFavorites(Long bookId, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
         Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new RuntimeException("Book not found"));
+                .orElseThrow(() -> new NotFoundException("Book not found"));
 
         favoriteBookRepository.deleteByUserAndBook(user, book);
     }
@@ -68,9 +70,9 @@ public class FavoriteBookService {
     @Transactional(readOnly = true)
     public boolean isFavorite(Long bookId, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
         Book book = bookRepository.findById(bookId)
-                .orElseThrow(() -> new RuntimeException("Book not found"));
+                .orElseThrow(() -> new NotFoundException("Book not found"));
 
         return favoriteBookRepository.existsByUserAndBook(user, book);
     }

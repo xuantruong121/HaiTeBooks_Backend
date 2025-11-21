@@ -3,6 +3,8 @@ package iuh.fit.haitebooks_backend.ai.service;
 import jakarta.annotation.PostConstruct;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -14,6 +16,8 @@ import java.util.List;
 @Service
 public class CohereEmbeddingService {
 
+    private static final Logger log = LoggerFactory.getLogger(CohereEmbeddingService.class);
+
     @Value("${COHERE_API_KEY}")
     private String cohereApiKey;
 
@@ -23,7 +27,7 @@ public class CohereEmbeddingService {
 
     @PostConstruct
     public void checkEndpoint() {
-        System.out.println("✅ Using Cohere endpoint: " + API_URL);
+        log.info("✅ Using Cohere endpoint: {}", API_URL);
     }
 
     public List<Double> generateEmbedding(String text) {
@@ -32,8 +36,8 @@ public class CohereEmbeddingService {
 
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
             try {
-                System.out.println("🔄 Gọi Cohere API lần " + attempt + " cho text: \"" +
-                        (text.length() > 60 ? text.substring(0, 60) + "..." : text) + "\"");
+                String textPreview = text.length() > 60 ? text.substring(0, 60) + "..." : text;
+                log.debug("🔄 Gọi Cohere API lần {} cho text: \"{}\"", attempt, textPreview);
 
                 // Header
                 HttpHeaders headers = new HttpHeaders();
@@ -64,33 +68,31 @@ public class CohereEmbeddingService {
                         embedding.add(embeddingsArray.getDouble(i));
                     }
 
-                    System.out.println("✅ Embedding sinh thành công (" + embedding.size() + " chiều).");
+                    log.info("✅ Embedding sinh thành công ({} chiều)", embedding.size());
                     return embedding;
 
                 } else {
-                    System.err.println("⚠️ Lỗi API: " + response.getStatusCode());
-                    System.err.println("📦 Nội dung phản hồi: " + response.getBody());
+                    log.warn("⚠️ Lỗi API: {} - {}", response.getStatusCode(), response.getBody());
                     // Nếu là rate limit (429), tăng delay trước khi retry
                     if (response.getStatusCode() == HttpStatus.TOO_MANY_REQUESTS) {
-                        System.err.println("🚫 Rate limit detected! Sẽ đợi lâu hơn...");
+                        log.warn("🚫 Rate limit detected! Sẽ đợi lâu hơn...");
                         retryDelayMs = 10000; // Đợi 10 giây nếu bị rate limit
                     }
                 }
 
             } catch (Exception e) {
-                System.err.println("❌ Lỗi khi gọi Cohere API (lần " + attempt + "): " + e.getMessage());
-                e.printStackTrace(); // In stack trace để debug
+                log.error("❌ Lỗi khi gọi Cohere API (lần {}): {}", attempt, e.getMessage(), e);
             }
 
             if (attempt < maxRetries) {
                 try {
-                    System.out.println("⏳ Đợi " + retryDelayMs + "ms trước khi thử lại...");
+                    log.debug("⏳ Đợi {}ms trước khi thử lại...", retryDelayMs);
                     Thread.sleep(retryDelayMs);
                 } catch (InterruptedException ignored) {}
             }
         }
 
-        System.err.println("🚫 Không thể sinh embedding sau " + maxRetries + " lần thử.");
+        log.error("🚫 Không thể sinh embedding sau {} lần thử", maxRetries);
         return List.of();
     }
 }

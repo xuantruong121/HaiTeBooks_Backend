@@ -2,6 +2,8 @@ package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.ReviewRequest;
 import iuh.fit.haitebooks_backend.dtos.response.ReviewResponse;
+import iuh.fit.haitebooks_backend.exception.ConflictException;
+import iuh.fit.haitebooks_backend.exception.NotFoundException;
 import iuh.fit.haitebooks_backend.mapper.ReviewMapper;
 import iuh.fit.haitebooks_backend.model.Book;
 import iuh.fit.haitebooks_backend.model.Review;
@@ -33,15 +35,15 @@ public class ReviewService {
     @Transactional
     public ReviewResponse createReview(ReviewRequest request) {
         User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found with id " + request.getUserId()));
+                .orElseThrow(() -> new NotFoundException("User not found with id " + request.getUserId()));
 
         Book book = bookRepository.findById(request.getBookId())
-                .orElseThrow(() -> new RuntimeException("Book not found with id " + request.getBookId()));
+                .orElseThrow(() -> new NotFoundException("Book not found with id " + request.getBookId()));
 
         // Kiểm tra trùng review
         boolean alreadyReviewed = reviewRepository.existsByUserIdAndBookId(user.getId(), book.getId());
         if (alreadyReviewed) {
-            throw new RuntimeException("User has already reviewed this book");
+            throw new ConflictException("User has already reviewed this book");
         }
 
         Review review = ReviewMapper.toEntity(request, user, book);
@@ -95,7 +97,7 @@ public class ReviewService {
     @Transactional
     public ReviewResponse updateReview(Long id, ReviewRequest request) {
         Review review = reviewRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Review not found with id " + id));
+                .orElseThrow(() -> new NotFoundException("Review not found with id " + id));
 
         // Chỉ cập nhật rating và comment, không thay đổi user và book
         review.setRating(request.getRating());
@@ -112,7 +114,7 @@ public class ReviewService {
     @Transactional
     public void deleteReview(Long id) {
         if (!reviewRepository.existsById(id)) {
-            throw new RuntimeException("Review not found with id " + id);
+            throw new NotFoundException("Review not found with id " + id);
         }
         reviewRepository.deleteById(id);
     }

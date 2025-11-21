@@ -11,7 +11,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/cart") // sửa từ carts -> cart để đồng bộ với SecurityConfig
-@CrossOrigin(origins = "*")
 public class CartController {
 
     private final CartService cartService;

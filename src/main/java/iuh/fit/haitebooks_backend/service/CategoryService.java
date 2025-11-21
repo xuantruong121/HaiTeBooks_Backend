@@ -2,6 +2,8 @@ package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.CategoryRequest;
 import iuh.fit.haitebooks_backend.dtos.response.CategoryResponse;
+import iuh.fit.haitebooks_backend.exception.ConflictException;
+import iuh.fit.haitebooks_backend.exception.NotFoundException;
 import iuh.fit.haitebooks_backend.mapper.CategoryMapper;
 import iuh.fit.haitebooks_backend.model.BookCategory;
 import iuh.fit.haitebooks_backend.repository.CategoryRepository;
@@ -33,7 +35,7 @@ public class CategoryService {
     @Transactional
     public BookCategory createCategory(CategoryRequest request) {
         if (categoryRepository.existsByNameIgnoreCase(request.getName())) {
-            throw new RuntimeException("Category name already exists: " + request.getName());
+            throw new ConflictException("Category name already exists: " + request.getName());
         }
 
         BookCategory category = CategoryMapper.toEntity(request);
@@ -44,7 +46,7 @@ public class CategoryService {
     @Transactional(readOnly = true)
     public BookCategory getCategoryById(Long id) {
         return categoryRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Category not found with id " + id));
+                .orElseThrow(() -> new NotFoundException("Category not found with id " + id));
     }
 
     // ✅ Cập nhật — kiểm tra trùng tên (trừ chính nó)
@@ -54,7 +56,7 @@ public class CategoryService {
 
         categoryRepository.findByNameIgnoreCase(request.getName()).ifPresent(existing -> {
             if (!existing.getId().equals(id)) {
-                throw new RuntimeException("Category name already exists: " + request.getName());
+                throw new ConflictException("Category name already exists: " + request.getName());
             }
         });
 
@@ -66,7 +68,7 @@ public class CategoryService {
     @Transactional
     public void deleteCategory(Long id) {
         if (!categoryRepository.existsById(id)) {
-            throw new RuntimeException("Category not found with id " + id);
+            throw new NotFoundException("Category not found with id " + id);
         }
         categoryRepository.deleteById(id);
     }

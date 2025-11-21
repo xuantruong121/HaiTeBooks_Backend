@@ -2,6 +2,8 @@ package iuh.fit.haitebooks_backend.config;
 
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -11,6 +13,8 @@ import java.util.*;
 
 @Component
 public class JwtUtil {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtUtil.class);
 
     private final Key key;
     private final long expirationMs;
@@ -25,7 +29,7 @@ public class JwtUtil {
             // dev fallback: dùng một key tạm (CHỈ DÙNG TRONG DEV)
             byte[] fallback = "dev-secret-dev-secret-dev-secret-1234".getBytes(StandardCharsets.UTF_8);
             this.key = Keys.hmacShaKeyFor(Arrays.copyOf(fallback, 32)); // đảm bảo 32 bytes min
-            System.out.println("⚠️ Warning: JWT secret empty, using DEV fallback key. Set app.jwt.secret in properties.");
+            log.warn("⚠️ Warning: JWT secret empty, using DEV fallback key. Set app.jwt.secret in properties.");
         } else {
             try {
                 // thử decode base64 trước; nếu fail thì dùng raw bytes
@@ -62,13 +66,13 @@ public class JwtUtil {
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder().setSigningKey(key).build().parseClaimsJws(token);
-            System.out.println("Token hợp lệ!");
+            log.debug("Token hợp lệ!");
             return true;
         } catch (ExpiredJwtException e) {
-            System.out.println("Token hết hạn!");
+            log.debug("Token hết hạn!");
             return false;
         } catch (JwtException | IllegalArgumentException ex) {
-            System.out.println("Token không hợp lệ: " + ex.getMessage());
+            log.debug("Token không hợp lệ: {}", ex.getMessage());
             return false;
         }
     }

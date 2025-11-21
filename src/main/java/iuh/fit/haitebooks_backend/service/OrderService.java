@@ -3,6 +3,8 @@ package iuh.fit.haitebooks_backend.service;
 import iuh.fit.haitebooks_backend.dtos.request.NotificationRequest;
 import iuh.fit.haitebooks_backend.dtos.request.OrderRequest;
 import iuh.fit.haitebooks_backend.dtos.response.OrderResponse;
+import iuh.fit.haitebooks_backend.exception.BadRequestException;
+import iuh.fit.haitebooks_backend.exception.NotFoundException;
 import iuh.fit.haitebooks_backend.mapper.OrderMapper;
 import iuh.fit.haitebooks_backend.model.*;
 import iuh.fit.haitebooks_backend.repository.BookRepository;
@@ -42,7 +44,7 @@ public class OrderService {
     public OrderResponse createOrder(OrderRequest request) {
 
         User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         Order order = new Order();
         order.setUser(user);
@@ -74,10 +76,10 @@ public class OrderService {
         List<Order_Item> items = request.getOrderItems().stream().map(itemReq -> {
 
             Book book = bookRepository.findById(itemReq.getBookId())
-                    .orElseThrow(() -> new RuntimeException("Book not found"));
+                    .orElseThrow(() -> new NotFoundException("Book not found"));
 
             if (book.getStock() < itemReq.getQuantity()) {
-                throw new RuntimeException("Not enough stock for: " + book.getTitle());
+                throw new BadRequestException("Not enough stock for: " + book.getTitle());
             }
 
             // ✅ Tối ưu: Chỉ cập nhật stock, không save từng cái
@@ -164,7 +166,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public List<OrderResponse> findByUser(Long userId) {
         if (!userRepository.existsById(userId)) {
-            throw new RuntimeException("User not found with id: " + userId);
+            throw new NotFoundException("User not found with id: " + userId);
         }
         List<Order> orders = orderRepository.findByUserId(userId);
         // Map trong transaction để đảm bảo lazy relationships được load
@@ -180,7 +182,7 @@ public class OrderService {
     @Transactional(readOnly = true)
     public OrderResponse getOrderById(Long id) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found with id " + id));
+                .orElseThrow(() -> new NotFoundException("Order not found with id " + id));
         
         // Đảm bảo lazy relationships được load trong transaction
         loadLazyRelationships(order);
@@ -191,7 +193,7 @@ public class OrderService {
     @Transactional
     public OrderResponse updateOrderStatus(Long id, String status) {
         Order order = orderRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Order not found with id " + id));
+                .orElseThrow(() -> new NotFoundException("Order not found with id " + id));
 
         try {
             Status_Order newStatus = Status_Order.valueOf(status.toUpperCase());
@@ -199,15 +201,15 @@ public class OrderService {
 
             // Kiểm tra luồng trạng thái hợp lệ
             if (current == Status_Order.COMPLETED || current == Status_Order.CANCELLED) {
-                throw new RuntimeException("Cannot change status of completed or cancelled order");
+                throw new BadRequestException("Cannot change status of completed or cancelled order");
             }
 
             if (current == Status_Order.PENDING && newStatus == Status_Order.COMPLETED) {
-                throw new RuntimeException("Order must be processed or shipped before completing");
+                throw new BadRequestException("Order must be processed or shipped before completing");
             }
 
             if (current == Status_Order.PROCESSING && newStatus == Status_Order.PENDING) {
-                throw new RuntimeException("Cannot revert to pending once processing");
+                throw new BadRequestException("Cannot revert to pending once processing");
             }
 
             order.setStatus(newStatus);
@@ -248,15 +250,14 @@ public class OrderService {
                     notificationService.send(noti, null);
                 }
             } catch (Exception ex) {
-                // Không để lỗi notification phá flow chính — chỉ log (ở đây ném Runtime để dev thấy)
-                // Bạn có thể đổi thành logger.warn(...)
-                System.err.println("Không gửi được notification: " + ex.getMessage());
+                // Không để lỗi notification phá flow chính — chỉ log
+                log.warn("Không gửi được notification: {}", ex.getMessage());
             }
 
             return OrderMapper.toOrderResponse(saved);
 
         } catch (IllegalArgumentException e) {
-            throw new RuntimeException("Invalid status: " + status);
+            throw new BadRequestException("Invalid status: " + status);
         }
     }
 
@@ -264,7 +265,7 @@ public class OrderService {
     @Transactional
     public void deleteOrder(Long id) {
         if (!orderRepository.existsById(id)) {
-            throw new RuntimeException("Order not found with id " + id);
+            throw new NotFoundException("Order not found with id " + id);
         }
         orderRepository.deleteById(id);
     }

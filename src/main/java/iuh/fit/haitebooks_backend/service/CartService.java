@@ -2,6 +2,7 @@ package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.CartRequest;
 import iuh.fit.haitebooks_backend.dtos.response.CartResponse;
+import iuh.fit.haitebooks_backend.exception.NotFoundException;
 import iuh.fit.haitebooks_backend.mapper.CartMapper;
 import iuh.fit.haitebooks_backend.model.Book;
 import iuh.fit.haitebooks_backend.model.Cart;
@@ -46,9 +47,9 @@ public class CartService {
     @Transactional
     public CartResponse addToCart(CartRequest request, String username) {
         User user = userRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
         Book book = bookRepository.findById(request.getBookId())
-                .orElseThrow(() -> new RuntimeException("Book not found"));
+                .orElseThrow(() -> new NotFoundException("Book not found"));
 
         Optional<Cart> existingCart = cartRepository.findByUserAndBook(user, book);
 
@@ -73,7 +74,7 @@ public class CartService {
     @Transactional
     public CartResponse updateQuantity(Long id, int quantity) {
         Cart cart = cartRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Cart item not found with id: " + id));
+                .orElseThrow(() -> new NotFoundException("Cart item not found with id: " + id));
         cart.setQuantity(quantity);
         cart = cartRepository.save(cart);
         
