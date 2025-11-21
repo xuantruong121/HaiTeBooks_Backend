@@ -13,6 +13,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
@@ -218,8 +219,8 @@ public class ChatbotService {
                                "Câu hỏi của khách hàng: " + userMessage;
 
             JSONObject body = new JSONObject();
-            // Sử dụng command-r-plus (hoặc command-r nếu không có)
-            body.put("model", "command-r-plus");
+            // Sử dụng command-r-08-2024 (model mới thay thế command-r đã bị xóa vào 15/09/2025)
+            body.put("model", "command-r-08-2024");
             
             body.put("message", userMessage);
             
@@ -256,14 +257,28 @@ public class ChatbotService {
             } else {
                 log.error("⚠️ Lỗi API: {} - {}", response.getStatusCode(), response.getBody());
                 
-                // Thử fallback với model đơn giản hơn
-                if (response.getStatusCode() == HttpStatus.BAD_REQUEST) {
+                // Thử fallback nếu model không hợp lệ (404) hoặc bad request (400)
+                if (response.getStatusCode() == HttpStatus.NOT_FOUND || 
+                    response.getStatusCode() == HttpStatus.BAD_REQUEST) {
+                    log.info("🔄 Thử fallback với model khác...");
                     return tryFallbackChat(userMessage, context);
                 }
                 
                 return "Xin lỗi, tôi không thể xử lý câu hỏi này ngay bây giờ. Vui lòng thử lại sau.";
             }
 
+        } catch (HttpClientErrorException e) {
+            // Xử lý lỗi HTTP từ Cohere API
+            log.error("❌ Lỗi HTTP từ Cohere API: {} - {}", e.getStatusCode(), e.getResponseBodyAsString());
+            
+            // Nếu là lỗi 404 (model không tồn tại) hoặc 400 (bad request), thử fallback
+            if (e.getStatusCode() == HttpStatus.NOT_FOUND || 
+                e.getStatusCode() == HttpStatus.BAD_REQUEST) {
+                log.info("🔄 Thử fallback với model khác...");
+                return tryFallbackChat(userMessage, context);
+            }
+            
+            return "Xin lỗi, có lỗi xảy ra khi xử lý câu hỏi của bạn. Vui lòng thử lại sau.";
         } catch (Exception e) {
             log.error("❌ Lỗi khi gọi Cohere Chat API: {}", e.getMessage(), e);
             return "Xin lỗi, có lỗi xảy ra khi xử lý câu hỏi của bạn. Vui lòng thử lại sau.";
@@ -287,36 +302,56 @@ public class ChatbotService {
     }
 
     /**
-     * Fallback chat với model đơn giản hơn nếu command-r-plus không khả dụng
+     * Fallback chat với model khác nếu model chính không khả dụng
+     * Thử theo thứ tự: command-a-03-2025 -> command-r-plus-08-2024
      */
     private String tryFallbackChat(String userMessage, String context) {
-        try {
-            HttpHeaders headers = new HttpHeaders();
-            headers.set("Authorization", "Bearer " + cohereApiKey);
-            headers.set("Cohere-Version", "2022-12-06");
-            headers.setContentType(MediaType.APPLICATION_JSON);
+        // Danh sách các model fallback theo thứ tự ưu tiên
+        String[] fallbackModels = {
+            "command-a-03-2025",      // Model mới nhất và mạnh nhất
+            "command-r-plus-08-2024"  // Model thay thế command-r-plus
+        };
+        
+        for (String model : fallbackModels) {
+            try {
+                log.info("🔄 Thử fallback với model: {}", model);
+                
+                HttpHeaders headers = new HttpHeaders();
+                headers.set("Authorization", "Bearer " + cohereApiKey);
+                headers.set("Cohere-Version", "2022-12-06");
+                headers.setContentType(MediaType.APPLICATION_JSON);
 
-            JSONObject body = new JSONObject();
-            body.put("model", "command-r"); // Model đơn giản hơn
-            body.put("message", userMessage);
-            body.put("preamble", SYSTEM_PROMPT + "\n\n" + context);
-            body.put("temperature", 0.7);
-            body.put("max_tokens", 800);
+                JSONObject body = new JSONObject();
+                body.put("model", model);
+                body.put("message", userMessage);
+                body.put("preamble", SYSTEM_PROMPT + "\n\n" + context);
+                body.put("temperature", 0.7);
+                body.put("max_tokens", 800);
 
-            HttpEntity<String> request = new HttpEntity<>(body.toString(), headers);
-            ResponseEntity<String> response = restTemplate.exchange(
-                    CHAT_API_URL, HttpMethod.POST, request, String.class
-            );
+                HttpEntity<String> request = new HttpEntity<>(body.toString(), headers);
+                ResponseEntity<String> response = restTemplate.exchange(
+                        CHAT_API_URL, HttpMethod.POST, request, String.class
+                );
 
-            if (response.getStatusCode() == HttpStatus.OK) {
-                JSONObject json = new JSONObject(response.getBody());
-                return json.has("text") ? json.getString("text") : 
-                       "Xin lỗi, tôi không thể tạo câu trả lời. Vui lòng thử lại sau.";
+                if (response.getStatusCode() == HttpStatus.OK) {
+                    JSONObject json = new JSONObject(response.getBody());
+                    if (json.has("text")) {
+                        log.info("✅ Fallback thành công với model: {}", model);
+                        return json.getString("text");
+                    }
+                }
+            } catch (HttpClientErrorException e) {
+                log.warn("⚠️ Model {} không khả dụng: {}", model, e.getStatusCode());
+                // Tiếp tục thử model tiếp theo
+                continue;
+            } catch (Exception e) {
+                log.error("❌ Lỗi khi thử fallback với model {}: {}", model, e.getMessage());
+                // Tiếp tục thử model tiếp theo
+                continue;
             }
-        } catch (Exception e) {
-            log.error("❌ Lỗi khi thử fallback chat: {}", e.getMessage());
         }
         
+        log.error("❌ Tất cả các model fallback đều không khả dụng");
         return "Xin lỗi, hệ thống đang gặp sự cố. Vui lòng liên hệ bộ phận hỗ trợ.";
     }
 
