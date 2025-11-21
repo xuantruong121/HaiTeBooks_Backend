@@ -1,5 +1,6 @@
 package iuh.fit.haitebooks_backend.service;
 
+import iuh.fit.haitebooks_backend.dtos.request.ChangePasswordRequest;
 import iuh.fit.haitebooks_backend.dtos.request.UserRequest;
 import iuh.fit.haitebooks_backend.dtos.response.UserResponse;
 import iuh.fit.haitebooks_backend.mapper.UserMapper;
@@ -147,6 +148,28 @@ public class UserService {
         // Đảm bảo lazy relationships được load trong transaction
         loadLazyRelationships(user);
         return UserMapper.toResponse(user);
+    }
+
+    // ✅ Đổi mật khẩu
+    @Transactional
+    public void changePassword(String username, ChangePasswordRequest request) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
+
+        // ✅ Xác thực mật khẩu cũ
+        if (!passwordEncoder.matches(request.getOldPassword(), user.getPassword())) {
+            throw new RuntimeException("Mật khẩu cũ không đúng");
+        }
+
+        // ✅ Kiểm tra mật khẩu mới không được trùng với mật khẩu cũ
+        if (passwordEncoder.matches(request.getNewPassword(), user.getPassword())) {
+            throw new RuntimeException("Mật khẩu mới phải khác mật khẩu cũ");
+        }
+
+        // ✅ Mã hóa và cập nhật mật khẩu mới
+        String encodedNewPassword = passwordEncoder.encode(request.getNewPassword());
+        user.setPassword(encodedNewPassword);
+        userRepository.save(user);
     }
 
     /**

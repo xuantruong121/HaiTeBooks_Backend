@@ -1,5 +1,6 @@
 package iuh.fit.haitebooks_backend.controller;
 
+import iuh.fit.haitebooks_backend.dtos.request.ChangePasswordRequest;
 import iuh.fit.haitebooks_backend.dtos.request.UserRequest;
 import iuh.fit.haitebooks_backend.dtos.response.UserResponse;
 import iuh.fit.haitebooks_backend.service.UserService;
@@ -10,6 +11,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
@@ -72,5 +74,15 @@ public class UserController {
         UserResponse current = userService.getByUsername(userDetails.getUsername());
         UserResponse updated = userService.updateUser(current.getId(), request);
         return ResponseEntity.ok(updated);
+    }
+
+    // ✅ Đổi mật khẩu
+    @PostMapping("/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @Valid @RequestBody ChangePasswordRequest request) {
+
+        userService.changePassword(userDetails.getUsername(), request);
+        return ResponseEntity.ok(Map.of("message", "Đổi mật khẩu thành công"));
     }
 }
