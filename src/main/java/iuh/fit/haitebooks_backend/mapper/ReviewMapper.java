@@ -27,6 +27,8 @@ public class ReviewMapper {
                 review.getId(),
                 review.getUser() != null ? review.getUser().getId() : null,
                 review.getBook() != null ? review.getBook().getId() : null,
+                review.getUser() != null ? review.getUser().getFullName() : null,
+                review.getBook() != null ? review.getBook().getTitle() : null,
                 review.getRating(),
                 review.getComment(),
                 review.getCreatedAt()

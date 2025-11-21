@@ -13,6 +13,8 @@ public class ReviewResponse {
     private Long id;
     private Long userId;
     private Long bookId;
+    private String userName;
+    private String bookTitle;
     private int rating;
     private String comment;
     private LocalDateTime createdAt;

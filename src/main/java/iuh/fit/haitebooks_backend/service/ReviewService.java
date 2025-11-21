@@ -125,9 +125,11 @@ public class ReviewService {
     private void loadLazyRelationships(Review review) {
         if (review.getUser() != null) {
             review.getUser().getId();
+            review.getUser().getFullName(); // Trigger load để lấy userName
         }
         if (review.getBook() != null) {
             review.getBook().getId();
+            review.getBook().getTitle(); // Trigger load để lấy bookTitle
         }
     }
 }
