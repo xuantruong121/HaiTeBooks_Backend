@@ -95,14 +95,22 @@ public class ChatbotService {
             // 5. Gọi Cohere Chat API
             String aiResponse = callCohereChatAPI(userMessage, context);
 
-            // 6. Trích xuất tên sách được đề xuất từ response
-            List<String> suggestedBooks = extractBookNames(aiResponse, relevantBooks);
-
-            // 7. Tạo sources (danh sách sách được tham khảo)
+            // 6. Tạo sources (danh sách sách được tham khảo - context đã dùng)
+            // Đây là những sách đã được đưa vào context để AI trả lời
             List<String> sources = relevantBooks.stream()
                     .limit(3) // Chỉ lấy 3 sách đầu tiên
                     .map(Book::getTitle)
                     .collect(Collectors.toList());
+
+            // 7. Trích xuất tên sách được đề xuất từ response của AI
+            // Nếu AI đề cập đến sách nào trong response, đó là sách được đề xuất
+            List<String> suggestedBooks = extractBookNames(aiResponse, relevantBooks);
+            
+            // Nếu không tìm thấy sách nào được đề xuất trong response,
+            // thì dùng sources làm suggestedBooks (vì đó là những sách liên quan nhất)
+            if (suggestedBooks.isEmpty() && !sources.isEmpty()) {
+                suggestedBooks = new ArrayList<>(sources);
+            }
 
             // 8. Tạo response
             Map<String, Object> response = new HashMap<>();
