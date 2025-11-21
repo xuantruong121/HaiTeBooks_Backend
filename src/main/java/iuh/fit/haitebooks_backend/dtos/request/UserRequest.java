@@ -25,4 +25,5 @@ public class UserRequest {
     private String address;
     private String password;
     private String roleName; // e.g. "USER", "ADMIN"
+    private Boolean enabled; // Trạng thái kích hoạt tài khoản (true/false)
 }

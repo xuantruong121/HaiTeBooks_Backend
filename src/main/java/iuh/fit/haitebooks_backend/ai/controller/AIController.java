@@ -11,6 +11,8 @@ import jakarta.validation.constraints.NotNull;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,13 +31,16 @@ public class AIController {
     private final BookSearchService bookSearchService;
     private final BookRecommendationService bookRecommendationService;
     private final EmbeddingAsyncService embeddingAsyncService;
+    private final iuh.fit.haitebooks_backend.service.UserService userService;
 
     public AIController(BookSearchService bookSearchService, 
                        BookRecommendationService bookRecommendationService,
-                       EmbeddingAsyncService embeddingAsyncService) {
+                       EmbeddingAsyncService embeddingAsyncService,
+                       iuh.fit.haitebooks_backend.service.UserService userService) {
         this.bookSearchService = bookSearchService;
         this.bookRecommendationService = bookRecommendationService;
         this.embeddingAsyncService = embeddingAsyncService;
+        this.userService = userService;
     }
 
     /**
@@ -71,6 +76,48 @@ public class AIController {
         int resultLimit = (limit != null && limit > 0) ? Math.min(limit, 20) : 5;
         
         List<BookResponse> results = bookRecommendationService.recommendSimilarBooks(bookId, resultLimit);
+        return ResponseEntity.ok(results);
+    }
+
+    /**
+     * Hybrid Recommendation: Gợi ý sách cho user hiện tại
+     * Kết hợp Content-Based (embedding) + Collaborative Filtering (hành vi người dùng)
+     * Không cần train model - sử dụng dữ liệu hiện có
+     * 
+     * @param userDetails User hiện tại từ authentication (tự động lấy từ JWT token)
+     * @param userId ID của user (optional - nếu không có thì dùng user từ authentication)
+     * @param limit Số lượng sách gợi ý tối đa (mặc định 10, tối đa 50)
+     * @return Danh sách sách được gợi ý kết hợp từ nhiều phương pháp
+     */
+    @GetMapping("/recommend-for-user")
+    public ResponseEntity<List<BookResponse>> recommendForUser(
+            @AuthenticationPrincipal UserDetails userDetails,
+            @RequestParam(required = false) Long userId,
+            @RequestParam(required = false) @Min(value = 1, message = "Limit phải lớn hơn 0") Integer limit) {
+        
+        // Giới hạn limit tối đa
+        int resultLimit = (limit != null && limit > 0) ? Math.min(limit, 50) : 10;
+        
+        // Lấy userId từ authentication nếu không có trong request
+        Long targetUserId = userId;
+        if (targetUserId == null && userDetails != null) {
+            try {
+                // Lấy user từ username trong token
+                var userResponse = userService.getByUsername(userDetails.getUsername());
+                targetUserId = userResponse.getId();
+                log.info("🔐 Lấy userId từ authentication: {}", targetUserId);
+            } catch (Exception e) {
+                log.error("❌ Không thể lấy userId từ authentication: {}", e.getMessage());
+                return ResponseEntity.badRequest().build();
+            }
+        }
+        
+        if (targetUserId == null) {
+            log.warn("⚠️ Không có userId để gợi ý");
+            return ResponseEntity.badRequest().build();
+        }
+        
+        List<BookResponse> results = bookRecommendationService.recommendForUser(targetUserId, resultLimit);
         return ResponseEntity.ok(results);
     }
 

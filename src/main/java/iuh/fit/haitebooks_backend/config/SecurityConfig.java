@@ -58,7 +58,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/books/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/ai/**").permitAll()
+                        // AI endpoints - search và recommend sách tương tự là public
+                        .requestMatchers(HttpMethod.GET, "/api/ai/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/ai/recommend/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/books/barcode/**").permitAll()
 
                         // 🔥 Public validate promotion
@@ -96,6 +98,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/payments/**").authenticated()
                         .requestMatchers("/api/cart/**").authenticated()
                         .requestMatchers("/api/favorites/**").authenticated()
+                        
+                        // AI - Hybrid Recommendation cho user (cần authentication vì dùng dữ liệu user)
+                        .requestMatchers(HttpMethod.GET, "/api/ai/recommend-for-user").authenticated()
 
                         // Reviews - GET is public, POST/PUT/DELETE require authentication
                         .requestMatchers(HttpMethod.POST, "/api/reviews/**").authenticated()

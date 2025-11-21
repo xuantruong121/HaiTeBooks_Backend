@@ -41,5 +41,9 @@ public class UserMapper {
         if (request.getAddress() != null) user.setAddress(request.getAddress());
         if (encodedPassword != null && !encodedPassword.isBlank()) user.setPassword(encodedPassword);
         if (role != null) user.setRole(role);
+        // ✅ Cập nhật enabled status nếu có trong request
+        if (request.getEnabled() != null) {
+            user.setEnabled(request.getEnabled());
+        }
     }
 }

@@ -124,6 +124,11 @@ public class UserService {
             encodedPassword = passwordEncoder.encode(request.getPassword());
         }
 
+        // ✅ Cập nhật enabled status nếu có trong request
+        if (request.getEnabled() != null) {
+            existing.setEnabled(request.getEnabled());
+        }
+
         UserMapper.updateEntity(existing, request, role, encodedPassword);
         existing = userRepository.save(existing);
         
