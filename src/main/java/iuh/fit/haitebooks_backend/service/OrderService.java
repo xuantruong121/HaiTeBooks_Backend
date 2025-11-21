@@ -1,6 +1,7 @@
 package iuh.fit.haitebooks_backend.service;
 
 import iuh.fit.haitebooks_backend.dtos.request.NotificationRequest;
+import iuh.fit.haitebooks_backend.dtos.request.OrderItemRequest;
 import iuh.fit.haitebooks_backend.dtos.request.OrderRequest;
 import iuh.fit.haitebooks_backend.dtos.response.OrderResponse;
 import iuh.fit.haitebooks_backend.exception.BadRequestException;
@@ -71,12 +72,28 @@ public class OrderService {
         final Order finalOrder = order;
 
         // ========================================================
-        // Xử lý cart items
+        // Xử lý cart items - Tối ưu: Query tất cả books một lần
         // ========================================================
+        // ✅ Tối ưu: Lấy tất cả book IDs và query một lần thay vì N queries
+        List<Long> bookIds = request.getOrderItems().stream()
+                .map(OrderItemRequest::getBookId)
+                .distinct()
+                .toList();
+        
+        List<Book> books = bookRepository.findAllById(bookIds);
+        if (books.size() != bookIds.size()) {
+            throw new NotFoundException("One or more books not found");
+        }
+        
+        // Tạo map để lookup nhanh
+        java.util.Map<Long, Book> bookMap = books.stream()
+                .collect(java.util.stream.Collectors.toMap(Book::getId, book -> book));
+        
         List<Order_Item> items = request.getOrderItems().stream().map(itemReq -> {
-
-            Book book = bookRepository.findById(itemReq.getBookId())
-                    .orElseThrow(() -> new NotFoundException("Book not found"));
+            Book book = bookMap.get(itemReq.getBookId());
+            if (book == null) {
+                throw new NotFoundException("Book not found with id: " + itemReq.getBookId());
+            }
 
             if (book.getStock() < itemReq.getQuantity()) {
                 throw new BadRequestException("Not enough stock for: " + book.getTitle());
@@ -94,10 +111,6 @@ public class OrderService {
             return item;
 
         }).toList();
-        
-        // ✅ Tối ưu: Batch update tất cả books một lần
-        // Collect unique books và saveAll (nếu cần, nhưng thường Hibernate tự flush)
-        // Vì đã set stock, Hibernate sẽ tự động update khi transaction commit
 
         order.setOrderItems(items);
 

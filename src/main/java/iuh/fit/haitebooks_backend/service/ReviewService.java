@@ -57,39 +57,30 @@ public class ReviewService {
     // ✅ Lấy tất cả review
     @Transactional(readOnly = true)
     public List<ReviewResponse> getAll() {
+        // Với @EntityGraph trong repository, book và user đã được eager fetch
         List<Review> reviews = reviewRepository.findAll();
-        // Map trong transaction để đảm bảo lazy relationships được load
         return reviews.stream()
-                .map(review -> {
-                    loadLazyRelationships(review);
-                    return ReviewMapper.toResponse(review);
-                })
+                .map(ReviewMapper::toResponse)
                 .toList();
     }
 
     // ✅ Lấy review theo sách
     @Transactional(readOnly = true)
     public List<ReviewResponse> findByBook(Long bookId) {
+        // Với @EntityGraph trong repository, book và user đã được eager fetch
         List<Review> reviews = reviewRepository.findByBookId(bookId);
-        // Map trong transaction để đảm bảo lazy relationships được load
         return reviews.stream()
-                .map(review -> {
-                    loadLazyRelationships(review);
-                    return ReviewMapper.toResponse(review);
-                })
+                .map(ReviewMapper::toResponse)
                 .toList();
     }
 
     // ✅ Lấy review theo user
     @Transactional(readOnly = true)
     public List<ReviewResponse> findByUser(Long userId) {
+        // Với @EntityGraph trong repository, book và user đã được eager fetch
         List<Review> reviews = reviewRepository.findByUserId(userId);
-        // Map trong transaction để đảm bảo lazy relationships được load
         return reviews.stream()
-                .map(review -> {
-                    loadLazyRelationships(review);
-                    return ReviewMapper.toResponse(review);
-                })
+                .map(ReviewMapper::toResponse)
                 .toList();
     }
 

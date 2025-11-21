@@ -97,12 +97,16 @@ public class NotificationService {
         notificationRepo.save(noti);
     }
 
-    // 🔥 Đánh dấu tất cả là đã đọc
+    // 🔥 Đánh dấu tất cả là đã đọc - Tối ưu: Dùng bulk update query
     @Transactional
     public void markAllAsRead(Long userId) {
-        List<Notification> list = notificationRepo.findByReceiverIdOrderByCreatedAtDesc(userId);
-        list.forEach(n -> n.setRead(true));
-        notificationRepo.saveAll(list);
+        // ✅ Tối ưu: Dùng bulk update query thay vì load tất cả và saveAll
+        // Giảm memory usage và số lượng queries
+        int updatedCount = notificationRepo.markAllAsReadByReceiverId(userId);
+        // Log để debug (optional)
+        if (updatedCount > 0) {
+            // Có thể gửi WebSocket notification nếu cần
+        }
     }
 
     // 🔥 Xóa 1 thông báo

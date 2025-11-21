@@ -128,13 +128,10 @@ public class PromotionService {
     // ---------------------------------------
     @Transactional(readOnly = true)
     public List<PromotionResponse> getAll() {
+        // Với @EntityGraph trong repository, createdBy và approvedBy đã được eager fetch
         List<Promotion> promotions = promotionRepo.findAll();
-        // Map trong transaction để đảm bảo lazy relationships được load
         return promotions.stream()
-                .map(promotion -> {
-                    loadLazyRelationships(promotion);
-                    return PromotionMapper.toResponse(promotion);
-                })
+                .map(PromotionMapper::toResponse)
                 .toList();
     }
 
