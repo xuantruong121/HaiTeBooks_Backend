@@ -31,18 +31,20 @@ public class CorsConfig {
             config.setAllowedOriginPatterns(List.of(
                     "http://localhost:*",
                     "http://127.0.0.1:*",
-                    "http://192.168.*.*:*"
+                    "http://192.168.*.*:*",
+                    "https://admin-haitebooks.vercel.app"
             ));
-            log.info("✅ [CORS] DEV mode — allow localhost & LAN");
+            log.info("✅ [CORS] DEV mode — allow localhost & LAN + Vercel");
         } else if ("prod".equalsIgnoreCase(activeProfile)) {
             config.setAllowedOriginPatterns(List.of(
                     frontendUrl,
                     "http://localhost:5173",
                     "http://192.168.100.156:5173",
                     "http://localhost:3001",
-                    "http://192.168.100.156:3001"
+                    "http://192.168.100.156:3001",
+                    "https://admin-haitebooks.vercel.app"
             ));
-            log.info("✅ [CORS] PROD mode — User App (5173) + Web Admin (3001)");
+            log.info("✅ [CORS] PROD mode — User App (5173) + Web Admin (3001) + Vercel");
         } else {
             config.setAllowedOriginPatterns(List.of("*"));
             config.setAllowCredentials(false);
