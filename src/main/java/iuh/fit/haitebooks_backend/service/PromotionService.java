@@ -124,6 +124,33 @@ public class PromotionService {
     }
 
     // ---------------------------------------
+    // 🔥 UPDATE STATUS (Cập nhật trạng thái)
+    // ---------------------------------------
+    @Transactional
+    public PromotionResponse updateStatus(Long promotionId, Boolean isActive, Long adminId) {
+        Promotion p = promotionRepo.findById(promotionId)
+                .orElseThrow(() -> new NotFoundException("Promotion not found"));
+
+        User admin = userRepo.findById(adminId)
+                .orElseThrow(() -> new NotFoundException("Admin not found"));
+
+        // Kiểm tra nếu trạng thái không thay đổi
+        if (p.isActive() == isActive) {
+            throw new BadRequestException("Trạng thái hiện tại đã là " + 
+                (isActive ? "kích hoạt" : "vô hiệu hóa"));
+        }
+
+        p.setActive(isActive);
+        promotionRepo.save(p);
+
+        // Log
+        String action = isActive ? PromotionLog.ACTIVATE : PromotionLog.DEACTIVATE;
+        saveLog(p, admin, action);
+
+        return PromotionMapper.toResponse(p);
+    }
+
+    // ---------------------------------------
     // 🔥 GET ALL
     // ---------------------------------------
     @Transactional(readOnly = true)

@@ -16,6 +16,7 @@ public class PromotionLog {
     public static final String APPROVE = "APPROVE";
     public static final String REJECT = "REJECT";
     public static final String DEACTIVATE = "DEACTIVATE";
+    public static final String ACTIVATE = "ACTIVATE";
     public static final String UPDATE = "UPDATE";
 
     @Id
