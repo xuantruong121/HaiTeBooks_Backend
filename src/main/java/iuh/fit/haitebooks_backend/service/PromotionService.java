@@ -116,6 +116,11 @@ public class PromotionService {
         User admin = userRepo.findById(adminId)
                 .orElseThrow(() -> new NotFoundException("Admin not found"));
 
+        // ✅ Thêm kiểm tra: Chỉ cho phép vô hiệu hóa nếu đang hoạt động
+        if (!p.isActive()) {
+            throw new BadRequestException("Khuyến mãi đã bị vô hiệu hóa");
+        }
+
         p.setActive(false);
         promotionRepo.save(p);
 
@@ -140,6 +145,24 @@ public class PromotionService {
                 (isActive ? "kích hoạt" : "vô hiệu hóa"));
         }
 
+        if (isActive) {
+            // ✅ KÍCH HOẠT: Kiểm tra thời gian còn không
+            LocalDate today = LocalDate.now();
+            if (today.isAfter(p.getEndDate())) {
+                throw new BadRequestException("Không thể kích hoạt khuyến mãi đã hết hạn");
+            }
+            
+            // Kiểm tra thời gian bắt đầu (tùy chọn)
+            if (today.isBefore(p.getStartDate())) {
+                throw new BadRequestException("Không thể kích hoạt khuyến mãi chưa đến ngày bắt đầu");
+            }
+        } else {
+            // ✅ VÔ HIỆU HÓA: Chỉ cho phép nếu đang hoạt động
+            if (!p.isActive()) {
+                throw new BadRequestException("Khuyến mãi đã bị vô hiệu hóa");
+            }
+        }
+
         p.setActive(isActive);
         promotionRepo.save(p);
 
@@ -153,10 +176,27 @@ public class PromotionService {
     // ---------------------------------------
     // 🔥 GET ALL
     // ---------------------------------------
-    @Transactional(readOnly = true)
+    @Transactional
     public List<PromotionResponse> getAll() {
-        // Với @EntityGraph trong repository, createdBy và approvedBy đã được eager fetch
         List<Promotion> promotions = promotionRepo.findAll();
+        LocalDate today = LocalDate.now();
+        
+        // ✅ Tự động vô hiệu hóa các promotion đã hết thời gian
+        List<Promotion> expiredPromotions = promotions.stream()
+                .filter(p -> p.isActive() && today.isAfter(p.getEndDate()))
+                .toList();
+        
+        if (!expiredPromotions.isEmpty()) {
+            for (Promotion p : expiredPromotions) {
+                p.setActive(false);
+                promotionRepo.save(p);
+                // Log tự động vô hiệu hóa (có thể dùng createdBy hoặc null)
+                if (p.getCreatedBy() != null) {
+                    saveLog(p, p.getCreatedBy(), PromotionLog.DEACTIVATE);
+                }
+            }
+        }
+        
         return promotions.stream()
                 .map(PromotionMapper::toResponse)
                 .toList();
@@ -188,18 +228,24 @@ public class PromotionService {
         if (!p.isActive()) {
             throw new BadRequestException("Mã khuyến mãi đã bị vô hiệu hóa");
         }
-        if (p.getApprovedBy() == null) {
-            throw new BadRequestException("Mã khuyến mãi chưa được duyệt");
-        }
+
+        // ✅ BỎ kiểm tra approvedBy vì tạo mới đã active rồi
+        // if (p.getApprovedBy() == null) {
+        //     throw new BadRequestException("Mã khuyến mãi chưa được duyệt");
+        // }
+
         if (p.getQuantity() <= 0) {
             throw new BadRequestException("Mã khuyến mãi đã hết số lượng");
         }
+
         if (today.isBefore(p.getStartDate())) {
             throw new BadRequestException("Mã khuyến mãi chưa đến ngày sử dụng");
         }
+
         if (today.isAfter(p.getEndDate())) {
             throw new BadRequestException("Mã khuyến mãi đã hết hạn");
         }
+
         // Kiểm tra điều kiện đơn hàng tối thiểu
         if (p.getMinimumOrderAmount() != null && orderAmount != null) {
             if (orderAmount < p.getMinimumOrderAmount()) {
@@ -224,8 +270,11 @@ public class PromotionService {
         p.setQuantity(p.getQuantity() - 1);
         promotionRepo.save(p);
 
-        // Log
-        saveLog(p, p.getApprovedBy(), "USE");
+        // Log - Sửa actor vì có thể không có approvedBy
+        User actor = p.getApprovedBy() != null ? p.getApprovedBy() : p.getCreatedBy();
+        if (actor != null) {
+            saveLog(p, actor, "USE");
+        }
 
         return p;
     }

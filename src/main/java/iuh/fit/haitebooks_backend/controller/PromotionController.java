@@ -65,6 +65,16 @@ public class PromotionController {
         return ResponseEntity.ok().build();
     }
 
+    // UPDATE STATUS - Dùng để kích hoạt lại từ deactivated
+    @PutMapping("/update-status/{promotionId}/{adminId}")
+    public ResponseEntity<PromotionResponse> updateStatus(
+            @PathVariable Long promotionId,
+            @PathVariable Long adminId,
+            @RequestParam Boolean isActive
+    ) {
+        return ResponseEntity.ok(promotionService.updateStatus(promotionId, isActive, adminId));
+    }
+
     // GET ALL
     @GetMapping
     public ResponseEntity<List<PromotionResponse>> getAll() {

@@ -19,6 +19,12 @@ public class PromotionMapper {
         res.setActive(p.isActive());
         res.setCreatedBy(p.getCreatedBy() != null ? p.getCreatedBy().getId() : null);
         res.setApprovedBy(p.getApprovedBy() != null ? p.getApprovedBy().getId() : null);
+        
+        // Tính toán status (nếu có field status)
+        if (res.getStatus() == null) {
+            res.setStatus(p.isActive() ? "approved" : "deactivated");
+        }
+        
         return res;
     }
 }

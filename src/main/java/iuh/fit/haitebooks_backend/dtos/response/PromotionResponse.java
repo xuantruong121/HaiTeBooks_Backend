@@ -16,4 +16,5 @@ public class PromotionResponse {
     private boolean active;
     private Long createdBy;
     private Long approvedBy;
+    private String status; // ✅ Thêm field này (tùy chọn)
 }
