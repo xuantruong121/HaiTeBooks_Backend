@@ -125,10 +125,11 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.PUT, "/api/promotions/**").hasRole("ADMIN")
                         .requestMatchers(HttpMethod.DELETE, "/api/promotions/**").hasRole("ADMIN")
 
-                        // Approve / Reject / Deactivate (ADMIN only)
+                        // Approve / Reject / Deactivate / Update Status (ADMIN only)
                         .requestMatchers("/api/promotions/approve/**").hasRole("ADMIN")
                         .requestMatchers("/api/promotions/reject/**").hasRole("ADMIN")
                         .requestMatchers("/api/promotions/deactivate/**").hasRole("ADMIN")
+                        .requestMatchers("/api/promotions/update-status/**").hasRole("ADMIN")
 
                         /* ================= ADMIN ROUTES ================= */
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")

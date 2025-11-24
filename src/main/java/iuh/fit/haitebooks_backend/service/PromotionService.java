@@ -176,13 +176,23 @@ public class PromotionService {
     // ---------------------------------------
     // 🔥 GET ALL
     // ---------------------------------------
-    @Transactional
+    @Transactional(readOnly = true)
     public List<PromotionResponse> getAll() {
+        // Với @EntityGraph trong repository, createdBy và approvedBy đã được eager fetch
         List<Promotion> promotions = promotionRepo.findAll();
+        return promotions.stream()
+                .map(PromotionMapper::toResponse)
+                .toList();
+    }
+
+    // ---------------------------------------
+    // 🔥 DEACTIVATE EXPIRED PROMOTIONS (Scheduled Task)
+    // ---------------------------------------
+    @Transactional
+    public void deactivateExpiredPromotions() {
         LocalDate today = LocalDate.now();
-        
-        // ✅ Tự động vô hiệu hóa các promotion đã hết thời gian
-        List<Promotion> expiredPromotions = promotions.stream()
+        List<Promotion> expiredPromotions = promotionRepo.findAll()
+                .stream()
                 .filter(p -> p.isActive() && today.isAfter(p.getEndDate()))
                 .toList();
         
@@ -196,10 +206,6 @@ public class PromotionService {
                 }
             }
         }
-        
-        return promotions.stream()
-                .map(PromotionMapper::toResponse)
-                .toList();
     }
 
 
